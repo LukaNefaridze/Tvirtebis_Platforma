@@ -60,6 +60,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.accounts.cache_middleware.NoCacheForAuthenticatedMiddleware',  # Prevent caching for authenticated users
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.PasswordChangeMiddleware',
@@ -136,6 +137,11 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Use ManifestStaticFilesStorage to add cache-busting hashes to static files
+# This prevents browsers from caching old versions of CSS/JS files
+if not DEBUG:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -150,6 +156,10 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Remember me functionality (overrides above when checked)
 SESSION_COOKIE_AGE_REMEMBER_ME = 2592000  # 30 days
+
+# Prevent session caching issues
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Login/Logout URLs
 LOGIN_URL = '/admin/login/'
@@ -314,8 +324,18 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 0 if DEBUG else 300,  # No caching in development
     }
 }
+
+# Cache control settings - prevent aggressive browser caching
+if DEBUG:
+    # In development, disable caching to prevent stale data issues
+    CACHE_MIDDLEWARE_SECONDS = 0
+    CACHE_MIDDLEWARE_KEY_PREFIX = ''
+    
+    # Add no-cache headers for all responses in development
+    USE_ETAGS = False
 
 # Logging configuration
 LOGGING = {

@@ -1,46 +1,16 @@
-<!-- templates/accounts/shipment_detail.html -->
-<!DOCTYPE html>
-<html lang="ka">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>განაცხადის დეტალები</title>
-    <!-- Tailwind CSS (Same engine as Django Unfold) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {"50":"#eff6ff","100":"#dbeafe","200":"#bfdbfe","300":"#93c5fd","400":"#60a5fa","500":"#3b82f6","600":"#2563eb","700":"#1d4ed8","800":"#1e40af","900":"#1e3a8a"}
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased">
-    <!-- Navigation (Simplified for User Portal) -->
-    <nav class="bg-slate-900 text-white p-4 shadow-md">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="font-bold text-xl flex items-center gap-2">
-                📦 ტვირთების პლატფორმა
-            </div>
-            <div class="flex items-center gap-4 text-sm">
-                <span class="text-gray-300">👤 {{ user.company_name }}</span>
-                <a href="{% url 'accounts:shipments' %}" class="hover:text-white text-gray-300 transition">განაცხადები</a>
-                <a href="{% url 'accounts:logout' %}" class="hover:text-red-300 text-gray-300 transition">გამოსვლა</a>
-            </div>
-        </div>
-    </nav>
+{% extends "accounts/base_portal.html" %}
 
-    <div class="max-w-7xl mx-auto p-4 lg:p-8">
+{% block title %}განაცხადის დეტალები{% endblock %}
+
+{% block content %}
+    <div class="max-w-7xl mx-auto">
         <!-- Back Link -->
         <a href="{% url 'accounts:shipments' %}" class="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 mb-6 transition">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             უკან განაცხადებზე
         </a>
 
+        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
             <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
@@ -51,7 +21,8 @@
 
         <!-- 1. Listing Header Card (Purple Gradient) -->
         <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl shadow-lg text-white p-6 mb-8 relative overflow-hidden">
-            <div class="relative z-10">
+            <!-- ... (Header Content from previous response) ... -->
+             <div class="relative z-10">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div class="text-2xl md:text-3xl font-bold flex items-center gap-3">
                         <span>{{ shipment.pickup_location }}</span>
@@ -97,7 +68,8 @@
         <!-- 2. Bids Section -->
         {% if bids %}
         <div>
-            <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center mb-6 gap-4">
+           <!-- ... (Bids Logic from previous response) ... -->
+             <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center mb-6 gap-4">
                 <h2 class="text-2xl font-bold text-gray-900">
                     შეთავაზებები <span class="text-gray-400 text-lg font-normal ml-1">({{ bids|length }})</span>
                 </h2>
@@ -178,14 +150,14 @@
                     <div class="flex gap-3 pt-4 border-t border-gray-100">
                         <form method="post" action="{% url 'accounts:accept_bid' shipment_pk=shipment.pk bid_pk=bid.pk %}" class="flex-1">
                             {% csrf_token %}
-                            <button type="submit" onclick="return confirm('დაადასტურეთ ბიდის მიღება?')"
+                            <button type="submit" onclick="return confirm('დაადასტურეთ ბიდის მიღება?')" 
                                     class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition shadow-sm text-sm">
                                 ✓ მიღება
                             </button>
                         </form>
                         <form method="post" action="{% url 'accounts:reject_bid' shipment_pk=shipment.pk bid_pk=bid.pk %}" class="flex-1">
                             {% csrf_token %}
-                            <button type="submit" onclick="return confirm('უარყოთ ბიდი?')"
+                            <button type="submit" onclick="return confirm('უარყოთ ბიდი?')" 
                                     class="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium py-2 px-4 rounded-lg transition text-sm">
                                 ✕ უარყოფა
                             </button>
@@ -271,11 +243,8 @@
 
                     // Re-append
                     cards.forEach(card => container.appendChild(card));
-                    
-                    // Reset visibility logic if needed (optional: keep expanded or reset)
                 });
             });
         });
     </script>
-</body>
-</html>
+{% endblock %}
