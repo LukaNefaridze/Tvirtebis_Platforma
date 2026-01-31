@@ -137,6 +137,39 @@ def reject_bid(request, shipment_pk, bid_pk):
 
 
 @login_required(login_url='/admin/login/')
+def user_bids_history(request):
+    """
+    List all bids for the user's shipments (historical view).
+    """
+    if isinstance(request.user, AdminUser):
+        return redirect('admin:bids_bid_changelist')
+    
+    if not isinstance(request.user, User):
+        return redirect('admin:login')
+    
+    # Get all bids for user's shipments
+    from apps.bids.models import Bid
+    
+    bids = Bid.objects.filter(
+        shipment__user=request.user
+    ).select_related(
+        'shipment', 'currency', 'broker'
+    ).order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(bids, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'user': request.user,
+        'bids': page_obj,
+        'total_count': bids.count(),
+    }
+    return render(request, 'accounts/bids_history.html', context)
+
+
+@login_required(login_url='/admin/login/')
 def user_password_change(request):
     """
     Custom password change view for regular User model.

@@ -51,13 +51,13 @@
                     </a>
                 </li>
 
-                <!-- 2. BIDEBI (Placeholder for now) -->
+                <!-- 2. BIDEBI -->
                 <li>
-                    <a href="#" 
-                       class="flex items-center p-2 text-gray-300 rounded-lg hover:bg-slate-800 hover:text-white group transition-colors">
+                    <a href="{% url 'accounts:bids_history' %}" 
+                       class="flex items-center p-2 rounded-lg group transition-colors
+                       {% if 'bids' in request.path %}bg-primary-600 text-white{% else %}text-gray-300 hover:bg-slate-800 hover:text-white{% endif %}">
                         <svg class="w-5 h-5 transition duration-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path></svg>
                         <span class="ml-3">ბიდები</span>
-                        <span class="inline-flex items-center justify-center w-3 h-3 p-3 ml-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">3</span>
                     </a>
                 </li>
             </ul>

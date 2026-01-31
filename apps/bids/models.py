@@ -65,6 +65,11 @@ class Broker(models.Model):
     def __str__(self):
         return self.company_name
 
+    @property
+    def is_authenticated(self):
+        """Always return True for active brokers."""
+        return self.is_active
+
 
 class BrokerAPIKey(models.Model):
     """
