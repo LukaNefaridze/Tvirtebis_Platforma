@@ -1,0 +1,281 @@
+<!-- templates/accounts/shipment_detail.html -->
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>განაცხადის დეტალები</title>
+    <!-- Tailwind CSS (Same engine as Django Unfold) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {"50":"#eff6ff","100":"#dbeafe","200":"#bfdbfe","300":"#93c5fd","400":"#60a5fa","500":"#3b82f6","600":"#2563eb","700":"#1d4ed8","800":"#1e40af","900":"#1e3a8a"}
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    <!-- Navigation (Simplified for User Portal) -->
+    <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="font-bold text-xl flex items-center gap-2">
+                📦 ტვირთების პლატფორმა
+            </div>
+            <div class="flex items-center gap-4 text-sm">
+                <span class="text-gray-300">👤 {{ user.company_name }}</span>
+                <a href="{% url 'accounts:shipments' %}" class="hover:text-white text-gray-300 transition">განაცხადები</a>
+                <a href="{% url 'accounts:logout' %}" class="hover:text-red-300 text-gray-300 transition">გამოსვლა</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-4 lg:p-8">
+        <!-- Back Link -->
+        <a href="{% url 'accounts:shipments' %}" class="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 mb-6 transition">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            უკან განაცხადებზე
+        </a>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- 1. Listing Header Card (Purple Gradient) -->
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl shadow-lg text-white p-6 mb-8 relative overflow-hidden">
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                        <span>{{ shipment.pickup_location }}</span>
+                        <span class="text-purple-300">→</span>
+                        <span>{{ shipment.delivery_location }}</span>
+                    </div>
+                    <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium border border-white/30">
+                        {{ shipment.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm md:text-base opacity-90">
+                    <div>
+                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">ტვირთი</div>
+                        <div class="font-medium flex items-center gap-2">
+                            📦 {{ shipment.cargo_type.name }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">მოცულობა</div>
+                        <div class="font-medium">
+                            ⚖️ {{ shipment.cargo_volume }} {{ shipment.volume_unit.abbreviation }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">ტრანსპორტი</div>
+                        <div class="font-medium">
+                            🚚 {{ shipment.transport_type.name }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">თარიღი</div>
+                        <div class="font-medium">
+                            📅 {{ shipment.pickup_date|date:"d M Y" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- 2. Bids Section -->
+        {% if bids %}
+        <div>
+            <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center mb-6 gap-4">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    შეთავაზებები <span class="text-gray-400 text-lg font-normal ml-1">({{ bids|length }})</span>
+                </h2>
+                
+                <!-- Sorting Toolbar -->
+                <div class="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-primary-700 bg-primary-50" data-sort="price">
+                        💰 ფასი
+                    </button>
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50" data-sort="time">
+                        ⚡ დრო
+                    </button>
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50" data-sort="created">
+                        📅 თარიღი
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bids Grid -->
+            <div id="bidsContainer" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {% for bid in bids %}
+                <div class="bid-card bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-6 relative group
+                            {% if forloop.counter > 3 %}hidden-bid hidden{% endif %}"
+                     data-price="{{ bid.price }}"
+                     data-time="{{ bid.estimated_delivery_time }}"
+                     data-created="{{ bid.created_at.timestamp }}">
+                    
+                    <!-- Status Badge -->
+                    <div class="absolute top-4 right-4">
+                        {% if bid.status == 'accepted' %}
+                            <span class="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-0.5 rounded border border-green-200">მიღებულია</span>
+                        {% elif bid.status == 'rejected' %}
+                            <span class="bg-red-100 text-red-800 text-xs font-bold px-2.5 py-0.5 rounded border border-red-200">უარყოფილია</span>
+                        {% else %}
+                            <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2.5 py-0.5 rounded border border-yellow-200">მოლოდინში</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Header -->
+                    <div class="mb-4 pr-20">
+                        <h3 class="text-lg font-bold text-gray-900 leading-tight">{{ bid.company_name }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">ბროკერი: {{ bid.broker.company_name }}</p>
+                    </div>
+
+                    <!-- Main Stats -->
+                    <div class="flex items-center justify-between bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase font-semibold">ფასი</p>
+                            <p class="text-2xl font-bold text-green-600">{{ bid.price }} <span class="text-sm text-gray-500">{{ bid.currency.symbol }}</span></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500 uppercase font-semibold">დრო</p>
+                            <p class="text-lg font-bold text-gray-700">{{ bid.estimated_delivery_time }} <span class="text-sm font-normal">სთ</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-4">
+                        <div>
+                            <span class="block text-xs text-gray-400">საკონტაქტო</span>
+                            <span class="font-medium text-gray-700">{{ bid.contact_person }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-400">ტელეფონი</span>
+                            <span class="font-medium text-gray-700">{{ bid.contact_phone }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Comment -->
+                    {% if bid.comment %}
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4 rounded-r text-sm text-yellow-800 italic">
+                        "{{ bid.comment }}"
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    {% if bid.status == 'pending' and shipment.status == 'active' %}
+                    <div class="flex gap-3 pt-4 border-t border-gray-100">
+                        <form method="post" action="{% url 'accounts:accept_bid' shipment_pk=shipment.pk bid_pk=bid.pk %}" class="flex-1">
+                            {% csrf_token %}
+                            <button type="submit" onclick="return confirm('დაადასტურეთ ბიდის მიღება?')"
+                                    class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition shadow-sm text-sm">
+                                ✓ მიღება
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'accounts:reject_bid' shipment_pk=shipment.pk bid_pk=bid.pk %}" class="flex-1">
+                            {% csrf_token %}
+                            <button type="submit" onclick="return confirm('უარყოთ ბიდი?')"
+                                    class="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium py-2 px-4 rounded-lg transition text-sm">
+                                ✕ უარყოფა
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Show All Button -->
+            {% if bids|length > 3 %}
+            <div class="mt-8 text-center">
+                <button id="showAllBtn" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-full shadow-sm transition inline-flex items-center gap-2">
+                    <span>მეტის ნახვა ({{ bids|length|add:"-3" }})</span>
+                    <svg class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center">
+            <div class="text-6xl mb-4">📭</div>
+            <h3 class="text-lg font-medium text-gray-900">შეთავაზებები არ არის</h3>
+            <p class="text-gray-500 mt-1">ამ განაცხადზე ჯერ არ შემოსულა ბიდები.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- JavaScript for Sorting & Toggle -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Show/Hide Logic
+            const showAllBtn = document.getElementById('showAllBtn');
+            const hiddenBids = document.querySelectorAll('.hidden-bid');
+            
+            if (showAllBtn) {
+                showAllBtn.addEventListener('click', function() {
+                    const isExpanded = this.classList.contains('expanded');
+                    const icon = this.querySelector('svg');
+                    const textSpan = this.querySelector('span');
+                    
+                    if (isExpanded) {
+                        hiddenBids.forEach(el => el.classList.add('hidden'));
+                        textSpan.textContent = `მეტის ნახვა (${hiddenBids.length})`;
+                        icon.style.transform = 'rotate(0deg)';
+                        this.classList.remove('expanded');
+                    } else {
+                        hiddenBids.forEach(el => el.classList.remove('hidden'));
+                        textSpan.textContent = 'ნაკლების ნახვა';
+                        icon.style.transform = 'rotate(180deg)';
+                        this.classList.add('expanded');
+                    }
+                });
+            }
+
+            // 2. Sorting Logic
+            const container = document.getElementById('bidsContainer');
+            const sortBtns = document.querySelectorAll('.sort-btn');
+
+            sortBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // UI Update
+                    sortBtns.forEach(b => {
+                        b.classList.remove('text-primary-700', 'bg-primary-50');
+                        b.classList.add('text-gray-600', 'hover:bg-gray-50');
+                    });
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                    btn.classList.add('text-primary-700', 'bg-primary-50');
+
+                    // Sorting
+                    const sortType = btn.dataset.sort;
+                    const cards = Array.from(container.querySelectorAll('.bid-card'));
+                    
+                    cards.sort((a, b) => {
+                        let valA = parseFloat(a.dataset[sortType]);
+                        let valB = parseFloat(b.dataset[sortType]);
+                        // Price & Time: Ascending (Lower is better)
+                        // Created: Descending (Newer is better)
+                        return sortType === 'created' ? valB - valA : valA - valB;
+                    });
+
+                    // Re-append
+                    cards.forEach(card => container.appendChild(card));
+                    
+                    // Reset visibility logic if needed (optional: keep expanded or reset)
+                });
+            });
+        });
+    </script>
+</body>
+</html>

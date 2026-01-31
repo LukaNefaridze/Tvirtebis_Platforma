@@ -1,0 +1,228 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% load i18n static unfold %}
+
+{% block content %}
+<div class="px-6 py-4">
+    <!-- Header with Title and Actions -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="text-gray-600 mt-1">
+                {{ cl.result_count }} განაცხადი
+                {% if 'status__exact' not in request.GET and 'all' not in request.GET %}
+                <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    მხოლოდ აქტიური
+                </span>
+                {% endif %}
+            </p>
+        </div>
+        
+        {% if has_add_permission %}
+        <a href="{% url 'admin:shipments_shipment_add' %}" 
+           class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            ახალი განაცხადი
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search and Filters Bar -->
+    <div class="bg-white rounded-lg shadow-sm mb-6 p-4">
+        <div class="flex flex-wrap gap-4">
+            <!-- Search -->
+            <div class="flex-1 min-w-[300px]">
+                <form method="get" class="relative">
+                    <input type="text" 
+                           name="q" 
+                           value="{{ cl.query }}"
+                           placeholder="ძიება..."
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <button type="submit" class="hidden">Search</button>
+                </form>
+            </div>
+
+            <!-- Filters -->
+            {% if cl.has_filters %}
+            <div class="flex gap-2">
+                {% for spec in cl.filter_specs %}
+                    <div class="relative">
+                        <select name="{{ spec.parameter_name }}" 
+                                onchange="this.form.submit()"
+                                class="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500">
+                            <option value="">{{ spec.title }}</option>
+                            {% for choice in spec.choices %}
+                                <option value="{{ choice.query_string }}" {% if choice.selected %}selected{% endif %}>
+                                    {{ choice.display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Grid Layout -->
+    {% if cl.result_list %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for shipment in cl.result_list %}
+        <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-200">
+            <!-- Status Badge Header -->
+            <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <span class="text-xs font-mono text-gray-500">{{ shipment.id|slice:":8" }}</span>
+                {% if shipment.status == 'active' %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">აქტიური</span>
+                {% elif shipment.status == 'completed' %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">დასრულებული</span>
+                {% elif shipment.status == 'cancelled' %}
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">გაუქმებული</span>
+                {% endif %}
+            </div>
+
+            <!-- Card Content -->
+            <div class="p-4">
+                <!-- Route -->
+                <div class="mb-4">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate" title="{{ shipment.pickup_location }}">
+                                {{ shipment.pickup_location|truncatechars:30 }}
+                            </p>
+                            <div class="flex items-center my-1">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-900 truncate" title="{{ shipment.delivery_location }}">
+                                {{ shipment.delivery_location|truncatechars:30 }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cargo Info -->
+                <div class="mb-3 flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <span class="font-medium">{{ shipment.cargo_volume }} {{ shipment.volume_unit.abbreviation }}</span>
+                    <span class="text-gray-400">•</span>
+                    <span>{{ shipment.cargo_type.name }}</span>
+                </div>
+
+                <!-- Pickup Date -->
+                <div class="mb-3 flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>{{ shipment.pickup_date|date:"d M Y, H:i" }}</span>
+                </div>
+
+                <!-- User -->
+                <div class="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span>{{ shipment.user.get_full_name }}</span>
+                </div>
+
+                <!-- Bids Count -->
+                <div class="pt-3 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-gray-900">
+                                {{ shipment.bids_count }} შეთავაზება
+                            </span>
+                        </div>
+                        {% if shipment.pending_bids_count > 0 %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                                {{ shipment.pending_bids_count }} ახალი
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Footer -->
+            <div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <a href="{% url 'admin:shipments_shipment_change' shipment.pk %}" 
+                   class="block w-full text-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition">
+                    ნახვა
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if cl.result_count > 0 %}
+    <div class="mt-8 flex justify-center">
+        <nav class="flex items-center gap-2">
+            {% if cl.can_show_all %}
+                <a href="?{% if cl.show_all_url_params %}{{ cl.show_all_url_params }}&{% endif %}all=1" 
+                   class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">
+                    ყველა
+                </a>
+            {% endif %}
+            
+            {% if cl.paginator.num_pages > 1 %}
+                {% if cl.paginator.num_pages == 1 %}
+                    <span class="px-3 py-2 text-sm text-gray-700">გვერდი 1 / 1</span>
+                {% else %}
+                    {% if cl.result_list.has_previous %}
+                        <a href="?page={{ cl.result_list.previous_page_number }}{{ cl.preserved_filters }}" 
+                           class="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">
+                            წინა
+                        </a>
+                    {% endif %}
+                    
+                    <span class="px-3 py-2 text-sm text-gray-700">
+                        გვერდი {{ cl.result_list.number }} / {{ cl.paginator.num_pages }}
+                    </span>
+                    
+                    {% if cl.result_list.has_next %}
+                        <a href="?page={{ cl.result_list.next_page_number }}{{ cl.preserved_filters }}" 
+                           class="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">
+                            შემდეგი
+                        </a>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">განაცხადები არ არის</h3>
+        <p class="text-gray-600 mb-6">დაიწყეთ პირველი განაცხადის შექმნით</p>
+        {% if has_add_permission %}
+        <a href="{% url 'admin:shipments_shipment_add' %}" 
+           class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            ახალი განაცხადი
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

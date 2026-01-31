@@ -72,6 +72,9 @@ class BidInline(TabularInline):
 class ShipmentAdmin(ModelAdmin):
     """Admin interface for Shipment model."""
     
+    # Custom template for grid layout
+    change_list_template = 'admin/shipments/shipment/change_list_grid.html'
+    
     list_display = ['id_short', 'user_name', 'route', 'pickup_date', 'cargo_info', 
                     'status_badge', 'bids_count_display', 'created_at']
     list_filter = ['status', 'created_at', 'cargo_type', 'transport_type']
@@ -222,8 +225,26 @@ class ShipmentAdmin(ModelAdmin):
         self.message_user(request, _(f'{count} ბიდი უარყოფილია'), messages.SUCCESS)
     
     def get_queryset(self, request):
-        """Filter queryset based on user type."""
+        """
+        Filter queryset based on user type.
+        CRUCIAL: Prefetch bids to avoid N+1 queries.
+        Without this, loading 20 shipments causes 21+ database queries.
+        """
         qs = super().get_queryset(request)
+        
+        # Optimize queries by prefetching related objects
+        qs = qs.select_related(
+            'user',
+            'cargo_type',
+            'volume_unit',
+            'transport_type',
+            'preferred_currency',
+            'selected_bid'
+        ).prefetch_related(
+            'bids',
+            'bids__broker',
+            'bids__currency'
+        )
         
         # If the logged-in user is a regular User, show only their shipments
         if isinstance(request.user, User):
@@ -236,11 +257,34 @@ class ShipmentAdmin(ModelAdmin):
         return request.user.is_authenticated
     
     def has_change_permission(self, request, obj=None):
-        """Users can change their own shipments, AdminUsers can change any."""
+        """
+        Users can change their own shipments, AdminUsers can change any.
+        Read-only mode: If obj is None (list view), return False for regular users.
+        """
+        # AdminUsers have full permissions
         if isinstance(request.user, AdminUser):
             return True
-        if isinstance(request.user, User) and obj and obj.user_id == request.user.pk:
+        
+        # Regular users: read-only list view, but can view details
+        if isinstance(request.user, User):
+            if obj is None:
+                # List view: read-only (users can't edit from list)
+                return False
+            # Detail view: users can change their own shipments
+            return obj.user_id == request.user.pk
+        
+        return False
+    
+    def has_view_permission(self, request, obj=None):
+        """All authenticated users can view shipments."""
+        if isinstance(request.user, AdminUser):
             return True
+        if isinstance(request.user, User):
+            if obj is None:
+                # List view: can view
+                return True
+            # Detail view: can view their own shipments
+            return obj.user_id == request.user.pk
         return False
     
     def has_delete_permission(self, request, obj=None):

@@ -4,7 +4,6 @@ import apps.shipments.validators
 import django.core.validators
 import django.db.models.deletion
 import uuid
-from django.conf import settings
 from django.db import migrations, models
 
 
@@ -13,9 +12,9 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('accounts', '0001_initial'),
         ('bids', '0001_initial'),
         ('metadata', '0001_initial'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
@@ -37,7 +36,7 @@ class Migration(migrations.Migration):
                 ('preferred_currency', models.ForeignKey(help_text='რომელ ვალუტაში მიიღებთ შეთავაზებებს', on_delete=django.db.models.deletion.PROTECT, related_name='shipments_currency', to='metadata.currency', verbose_name='სასურველი ვალუტა')),
                 ('selected_bid', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='selected_for_shipment', to='bids.bid', verbose_name='არჩეული ბიდი')),
                 ('transport_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='shipments_transport', to='metadata.transporttype', verbose_name='ტრანსპორტის ტიპი')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='shipments', to=settings.AUTH_USER_MODEL, verbose_name='განმცხადებელი')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='shipments', to='accounts.user', verbose_name='განმცხადებელი')),
                 ('volume_unit', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='shipments_volume', to='metadata.volumeunit', verbose_name='მოცულობის ერთეული')),
             ],
             options={

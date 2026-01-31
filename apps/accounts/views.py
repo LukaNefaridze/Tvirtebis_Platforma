@@ -23,8 +23,8 @@ def login_router(request):
     elif isinstance(request.user, User):
         if request.user.must_change_password:
             return redirect('accounts:password_change')
-        # Redirect regular users to admin panel (user portal view)
-        return redirect('admin:shipments_shipment_changelist')
+        # Redirect regular users to user portal
+        return redirect('accounts:shipments')
     
     return redirect('admin:login')
 
@@ -87,7 +87,7 @@ def user_shipment_detail(request, pk):
     context = {
         'user': request.user,
         'shipment': shipment,
-        'bids': shipment.bids.all().order_by('-created_at'),
+        'bids': shipment.bids.select_related('broker', 'currency').all().order_by('price'),  # Order by price (cheapest first)
     }
     return render(request, 'accounts/shipment_detail.html', context)
 
@@ -95,6 +95,10 @@ def user_shipment_detail(request, pk):
 @login_required(login_url='/admin/login/')
 def accept_bid(request, shipment_pk, bid_pk):
     """Accept a bid for a shipment."""
+    if request.method != 'POST':
+        messages.error(request, _('არასწორი მოთხოვნა'))
+        return redirect('accounts:shipment_detail', pk=shipment_pk)
+    
     if not isinstance(request.user, User):
         return redirect('admin:login')
     
@@ -113,6 +117,10 @@ def accept_bid(request, shipment_pk, bid_pk):
 @login_required(login_url='/admin/login/')
 def reject_bid(request, shipment_pk, bid_pk):
     """Reject a bid for a shipment."""
+    if request.method != 'POST':
+        messages.error(request, _('არასწორი მოთხოვნა'))
+        return redirect('accounts:shipment_detail', pk=shipment_pk)
+    
     if not isinstance(request.user, User):
         return redirect('admin:login')
     
