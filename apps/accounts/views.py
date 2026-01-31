@@ -149,12 +149,34 @@ def user_bids_history(request):
     
     # Get all bids for user's shipments
     from apps.bids.models import Bid
+    from django.db.models import Q
     
     bids = Bid.objects.filter(
         shipment__user=request.user
     ).select_related(
         'shipment', 'currency', 'broker'
     ).order_by('-created_at')
+
+    # Filters
+    status = request.GET.get('status')
+    if status:
+        bids = bids.filter(status=status)
+
+    date_from = request.GET.get('date_from')
+    if date_from:
+        bids = bids.filter(created_at__date__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        bids = bids.filter(created_at__date__lte=date_to)
+
+    search_query = request.GET.get('search')
+    if search_query:
+        bids = bids.filter(
+            Q(broker__company_name__icontains=search_query) |
+            Q(shipment__pickup_location__icontains=search_query) |
+            Q(shipment__delivery_location__icontains=search_query)
+        )
     
     # Pagination
     paginator = Paginator(bids, 20)
@@ -165,6 +187,10 @@ def user_bids_history(request):
         'user': request.user,
         'bids': page_obj,
         'total_count': bids.count(),
+        'filter_status': status,
+        'filter_date_from': date_from,
+        'filter_date_to': date_to,
+        'filter_search': search_query,
     }
     return render(request, 'accounts/bids_history.html', context)
 

@@ -11,6 +11,54 @@
             </h1>
         </div>
 
+        <!-- Filters -->
+        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">ძებნა</label>
+                    <input type="text" name="search" id="search" value="{{ filter_search|default:'' }}" 
+                           placeholder="კომპანია, ლოკაცია..."
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">სტატუსი</label>
+                    <select name="status" id="status" class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        <option value="">ყველა</option>
+                        <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>მოლოდინში</option>
+                        <option value="accepted" {% if filter_status == 'accepted' %}selected{% endif %}>მიღებული</option>
+                        <option value="rejected" {% if filter_status == 'rejected' %}selected{% endif %}>უარყოფილი</option>
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">თარიღი (-დან)</label>
+                        <input type="date" name="date_from" id="date_from" value="{{ filter_date_from|default:'' }}"
+                               class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="date_to" class="block text-sm font-medium text-gray-700 mb-1">თარიღი (-მდე)</label>
+                        <input type="date" name="date_to" id="date_to" value="{{ filter_date_to|default:'' }}"
+                               class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="flex-1 bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        გაფილტვრა
+                    </button>
+                    <a href="{% url 'accounts:bids_history' %}" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        გასუფთავება
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <!-- Bids Table -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
@@ -87,13 +135,13 @@
         {% if bids.has_other_pages %}
         <div class="flex justify-center mt-8 gap-2">
             {% if bids.has_previous %}
-                <a href="?page={{ bids.previous_page_number }}" class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 text-sm">← წინა</a>
+                <a href="?page={{ bids.previous_page_number }}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_date_from %}&date_from={{ filter_date_from }}{% endif %}{% if filter_date_to %}&date_to={{ filter_date_to }}{% endif %}{% if filter_search %}&search={{ filter_search }}{% endif %}" class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 text-sm">← წინა</a>
             {% endif %}
             <span class="px-4 py-2 border border-primary-500 rounded-md bg-primary-50 text-primary-700 font-medium text-sm">
                 {{ bids.number }} / {{ bids.paginator.num_pages }}
             </span>
             {% if bids.has_next %}
-                <a href="?page={{ bids.next_page_number }}" class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 text-sm">შემდეგი →</a>
+                <a href="?page={{ bids.next_page_number }}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_date_from %}&date_from={{ filter_date_from }}{% endif %}{% if filter_date_to %}&date_to={{ filter_date_to }}{% endif %}{% if filter_search %}&search={{ filter_search }}{% endif %}" class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 text-sm">შემდეგი →</a>
             {% endif %}
         </div>
         {% endif %}

@@ -19,50 +19,51 @@
             {% endfor %}
         {% endif %}
 
-        <!-- 1. Listing Header Card (Purple Gradient) -->
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl shadow-lg text-white p-6 mb-8 relative overflow-hidden">
-            <!-- ... (Header Content from previous response) ... -->
-             <div class="relative z-10">
+        <!-- 1. Listing Header Card (Professional Minimalist) -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm text-gray-900 p-6 mb-8 relative overflow-hidden">
+            <div class="relative z-10">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                    <div class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    <div class="text-2xl md:text-3xl font-bold flex items-center gap-3 text-gray-900">
                         <span>{{ shipment.pickup_location }}</span>
-                        <span class="text-purple-300">→</span>
+                        <span class="text-gray-400">→</span>
                         <span>{{ shipment.delivery_location }}</span>
                     </div>
-                    <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium border border-white/30">
+                    <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium border border-gray-200">
                         {{ shipment.get_status_display }}
                     </span>
                 </div>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm md:text-base opacity-90">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm md:text-base">
                     <div>
-                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">ტვირთი</div>
-                        <div class="font-medium flex items-center gap-2">
-                            📦 {{ shipment.cargo_type.name }}
+                        <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">ტვირთი</div>
+                        <div class="font-medium flex items-center gap-2 text-gray-900">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            {{ shipment.cargo_type.name }}
                         </div>
                     </div>
                     <div>
-                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">მოცულობა</div>
-                        <div class="font-medium">
-                            ⚖️ {{ shipment.cargo_volume }} {{ shipment.volume_unit.abbreviation }}
+                        <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">მოცულობა</div>
+                        <div class="font-medium flex items-center gap-2 text-gray-900">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                            {{ shipment.cargo_volume }} {{ shipment.volume_unit.abbreviation }}
                         </div>
                     </div>
                     <div>
-                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">ტრანსპორტი</div>
-                        <div class="font-medium">
-                            🚚 {{ shipment.transport_type.name }}
+                        <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">ტრანსპორტი</div>
+                        <div class="font-medium flex items-center gap-2 text-gray-900">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+                            {{ shipment.transport_type.name }}
                         </div>
                     </div>
                     <div>
-                        <div class="text-purple-200 text-xs uppercase tracking-wider font-semibold mb-1">თარიღი</div>
-                        <div class="font-medium">
-                            📅 {{ shipment.pickup_date|date:"d M Y" }}
+                        <div class="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-1">თარიღი</div>
+                        <div class="font-medium flex items-center gap-2 text-gray-900">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            {{ shipment.pickup_date|date:"d M Y" }}
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- Decorative circle -->
-            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
         </div>
 
         <!-- 2. Bids Section -->
@@ -76,14 +77,17 @@
                 
                 <!-- Sorting Toolbar -->
                 <div class="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-primary-700 bg-primary-50" data-sort="price">
-                        💰 ფასი
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-primary-700 bg-primary-50 flex items-center gap-2" data-sort="price">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        ფასი
                     </button>
-                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50" data-sort="time">
-                        ⚡ დრო
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 flex items-center gap-2" data-sort="time">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        დრო
                     </button>
-                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50" data-sort="created">
-                        📅 თარიღი
+                    <button class="sort-btn px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 flex items-center gap-2" data-sort="created">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        თარიღი
                     </button>
                 </div>
             </div>
@@ -181,7 +185,9 @@
         {% else %}
         <!-- Empty State -->
         <div class="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center">
-            <div class="text-6xl mb-4">📭</div>
+            <div class="flex justify-center mb-4">
+                <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+            </div>
             <h3 class="text-lg font-medium text-gray-900">შეთავაზებები არ არის</h3>
             <p class="text-gray-500 mt-1">ამ განაცხადზე ჯერ არ შემოსულა ბიდები.</p>
         </div>
