@@ -127,6 +127,11 @@ class BidCreateSerializer(serializers.Serializer):
         max_length=20,
         help_text='Contact phone number'
     )
+    broker_id = serializers.CharField(
+        max_length=100,
+        required=False,
+        help_text='Unique ID of the broker on your platform'
+    )
     
     def validate_currency(self, value):
         """Validate that currency exists."""

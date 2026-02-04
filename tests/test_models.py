@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from apps.accounts.models import AdminUser, User
+from apps.accounts.models import User
 from apps.accounts.utils import generate_temporary_password, validate_personal_id, validate_mobile_number
 from apps.metadata.models import Currency, CargoType, TransportType, VolumeUnit
 from apps.bids.models import Platform, PlatformAPIKey, Bid, RejectedBidCache
@@ -53,7 +53,7 @@ class UserModelTestCase(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.admin = AdminUser.objects.create_superuser(
+        self.admin = User.objects.create_superuser(
             email='admin@test.com',
             password='TestPass123!',
             first_name='Admin',
@@ -68,8 +68,7 @@ class UserModelTestCase(TestCase):
             first_name='Test',
             last_name='User',
             personal_id='12345678901',
-            mobile='+995555123456',
-            created_by_admin=self.admin
+            mobile='+995555123456'
         )
         
         self.assertEqual(user.email, 'user@test.com')
@@ -82,7 +81,7 @@ class ShipmentModelTestCase(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.admin = AdminUser.objects.create_superuser(
+        self.admin = User.objects.create_superuser(
             email='admin@test.com',
             password='TestPass123!',
             first_name='Admin',
@@ -95,8 +94,7 @@ class ShipmentModelTestCase(TestCase):
             first_name='Test',
             last_name='User',
             personal_id='12345678901',
-            mobile='+995555123456',
-            created_by_admin=self.admin
+            mobile='+995555123456'
         )
         
         self.currency = Currency.objects.create(code='GEL', name='Lari', symbol='₾')
@@ -172,7 +170,7 @@ class BidModelTestCase(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.admin = AdminUser.objects.create_superuser(
+        self.admin = User.objects.create_superuser(
             email='admin@test.com',
             password='TestPass123!',
             first_name='Admin',
@@ -185,8 +183,7 @@ class BidModelTestCase(TestCase):
             first_name='Test',
             last_name='User',
             personal_id='12345678901',
-            mobile='+995555123456',
-            created_by_admin=self.admin
+            mobile='+995555123456'
         )
         
         self.currency = Currency.objects.create(code='GEL', name='Lari', symbol='₾')

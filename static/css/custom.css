@@ -60,3 +60,42 @@
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
 }
+
+/* Custom Input Style (replicates Tailwind classes) */
+.custom-password-input {
+    /* Base styles (border bg-white font-medium rounded-md shadow-sm text-gray-500 text-sm px-3 py-2) */
+    background-color: white;
+    border: 1px solid #e5e7eb; /* gray-200 default */
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    color: rgb(107 114 128); /* gray-500 */
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    width: 250px;
+    outline: none;
+    transition: all 0.15s ease-in-out;
+}
+
+/* Focus State */
+.custom-password-input:focus {
+    border-color: rgb(37 99 235); /* primary-600 */
+    box-shadow: 0 0 0 3px rgb(147 197 253 / 0.5); /* ring-primary-300 */
+}
+
+/* Dark Mode Support (Unfold uses 'dark' class on html/body) */
+.dark .custom-password-input {
+    background-color: rgb(17 24 39); /* gray-900 */
+    border-color: rgb(55 65 81); /* gray-700 */
+    color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark .custom-password-input:focus {
+    border-color: rgb(37 99 235); /* primary-600 */
+    box-shadow: 0 0 0 3px rgb(29 78 216 / 0.5); /* ring-primary-700 */
+}
+
+/* Error State */
+.errors .custom-password-input {
+    border-color: rgb(220 38 38); /* red-600 */
+}

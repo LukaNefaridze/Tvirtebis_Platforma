@@ -226,7 +226,8 @@ class BidCreateAPIView(APIView):
             price=validated_data['price'],
             estimated_delivery_time=validated_data['estimated_delivery_time'],
             currency=currency,
-            company_name=validated_data['company_name']
+            company_name=validated_data['company_name'],
+            external_user_id=validated_data.get('broker_id')
         )
         
         if not can_submit:
@@ -247,6 +248,7 @@ class BidCreateAPIView(APIView):
             comment=validated_data.get('comment', ''),
             contact_person=validated_data['contact_person'],
             contact_phone=validated_data['contact_phone'],
+            external_user_id=validated_data.get('broker_id'),
             status='pending'
         )
         
@@ -262,3 +264,43 @@ class BidCreateAPIView(APIView):
                 'created_at': bid.created_at.isoformat()
             }
         }, status=status.HTTP_201_CREATED)
+
+
+class PlatformBidListAPIView(generics.ListAPIView):
+    """
+    GET /api/v1/my-bids/
+    
+    Returns list of bids submitted by the authenticated platform.
+    Requires platform authentication.
+    """
+    serializer_class = BidResponseSerializer
+    permission_classes = [IsAuthenticatedPlatform]
+    
+    def get_queryset(self):
+        """Return bids for the current platform."""
+        return Bid.objects.filter(platform=self.request.user).select_related(
+            'shipment', 'currency'
+        ).order_by('-created_at')
+    
+    def list(self, request, *args, **kwargs):
+        """Override list to return custom response format."""
+        queryset = self.get_queryset()
+        
+        # Pagination
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            pagination_data = self.paginator.get_paginated_response(serializer.data).data
+            
+            return success_response({
+                'bids': serializer.data,
+                'pagination': {
+                    'current_page': pagination_data.get('current', 1),
+                    'total_pages': pagination_data.get('num_pages', 1),
+                    'total_items': pagination_data.get('count', 0),
+                    'items_per_page': self.paginator.page_size
+                }
+            })
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response({'bids': serializer.data})

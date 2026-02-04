@@ -33,10 +33,12 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
     ordering = ['-created_at']
     actions = ['reset_password_action']
     
+    change_form_template = 'admin/accounts/user/change_form.html'
+    
     # Define fieldsets for different sections
     fieldsets = (
         (None, {
-            'fields': ('email', 'password')
+            'fields': ('email', 'password', 'new_password')
         }),
         (_('პირადი ინფორმაცია'), {
             'fields': ('first_name', 'last_name', 'role', 'personal_id', 'mobile')
@@ -97,6 +99,15 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
             )
             self.message_user(request, message, messages.SUCCESS)
         else:
+            # Check if new password was provided in change form
+            new_password = form.cleaned_data.get('new_password')
+            if new_password:
+                obj.set_password(new_password)
+                # If admin changes password, we might want to force user to change it again
+                # or assume admin knows what they are doing. Let's force change for safety.
+                obj.must_change_password = True
+                self.message_user(request, _('პაროლი წარმატებით შეიცვალა'), messages.SUCCESS)
+                
             super().save_model(request, obj, form, change)
 
     @action(description=_('პაროლის განახლება (დროებითი პაროლი)'))
@@ -116,3 +127,9 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
                 temp_password
             )
             self.message_user(request, message, messages.SUCCESS)
+
+    class Media:
+        css = {
+            'all': ('css/custom.css',)
+        }
+

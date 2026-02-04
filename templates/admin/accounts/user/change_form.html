@@ -1,0 +1,44 @@
+{% extends 'admin/change_form.html' %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.querySelector('input[name="new_password"]');
+            if (passwordInput) {
+                // Create wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative'; 
+                wrapper.style.width = '250px'; // Explicit inline style to ensure it works
+                
+                // Insert wrapper before input and move input inside
+                passwordInput.parentNode.insertBefore(wrapper, passwordInput);
+                wrapper.appendChild(passwordInput);
+                
+                // Create toggle button
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'absolute right-0 top-0 bottom-0 px-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none';
+                toggleBtn.innerHTML = '<span class="material-symbols-outlined text-lg">visibility</span>';
+                toggleBtn.style.cursor = 'pointer';
+                
+                // Add padding to input to prevent text overlap with icon
+                passwordInput.style.paddingRight = '2.5rem';
+                
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    if (type === 'text') {
+                        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-lg">visibility_off</span>';
+                    } else {
+                        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-lg">visibility</span>';
+                    }
+                });
+                
+                wrapper.appendChild(toggleBtn);
+            }
+        });
+    </script>
+{% endblock %}

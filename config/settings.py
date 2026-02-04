@@ -192,7 +192,7 @@ REST_FRAMEWORK = {
 UNFOLD = {
     "SITE_TITLE": "ტვირთების პლატფორმა",
     "SITE_HEADER": "ტვირთების გადაზიდვის პლატფორმა",
-    "SITE_URL": "/",
+    "SITE_URL": None,
     "SITE_SYMBOL": "📦",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,

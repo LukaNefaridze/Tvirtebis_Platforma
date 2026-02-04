@@ -91,7 +91,7 @@ class BidInline(TabularInline):
             accept_url = reverse('admin:shipment_accept_bid', args=[obj.shipment.pk, obj.pk])
             reject_url = reverse('admin:shipment_reject_bid', args=[obj.shipment.pk, obj.pk])
             return format_html(
-                '<a href="{}">მიღება</a> / <a href="{}">უარყოფა</a>',
+                '<a href="{}">მიღება</a> | <a href="{}">უარყოფა</a>',
                 accept_url, reject_url
             )
         return obj.get_status_display()
@@ -233,19 +233,25 @@ class ShipmentAdmin(ModelAdmin):
         # Get the shipment object
         obj = self.get_object(request, object_id)
         
-        if obj and request.user.role == 'client':
-            if obj.status == 'active':
-                # For clients viewing active shipments, show in read-only mode
-                # but allow bid actions
-                extra_context['show_save'] = False
-                extra_context['show_save_and_continue'] = False
-                extra_context['show_delete_link'] = False
-                extra_context['title'] = _('განაცხადის ნახვა და ბიდების მართვა')
+        if obj:
+            is_client = request.user.role == 'client' and not request.user.is_superuser
+            is_active = obj.status == 'active'
+            
+            # Make read-only for everyone if shipment exists (published)
+            extra_context['show_save'] = False
+            extra_context['show_save_and_continue'] = False
+            
+            if is_active:
+                if is_client:
+                    extra_context['show_delete_link'] = False
+                    extra_context['title'] = _('განაცხადის ნახვა და ბიდების მართვა')
+                else:
+                    # Admins can still delete, but can't save changes
+                    extra_context['title'] = _('განაცხადის დეტალები (გამოქვეყნებული)')
             else:
-                # For completed/cancelled shipments
-                extra_context['show_save'] = False
-                extra_context['show_save_and_continue'] = False
-                extra_context['show_delete_link'] = False
+                # Completed/Cancelled
+                if is_client:
+                    extra_context['show_delete_link'] = False
                 extra_context['title'] = _('განაცხადის დეტალები')
         
         return super().change_view(request, object_id, form_url, extra_context)
@@ -401,12 +407,11 @@ class ShipmentAdmin(ModelAdmin):
         Make all fields readonly if shipment is active or if viewing as client.
         Otherwise, return default readonly fields.
         """
-        # For clients viewing any existing shipment, make all fields readonly
-        if obj and request.user.role == 'client' and not request.user.is_superuser:
-            # Return ALL fields as readonly
+        # If shipment exists (is published), make all fields readonly for everyone
+        if obj:
             return [field.name for field in self.model._meta.fields]
             
-        # Default behavior for admins
+        # Default behavior for admins (creating new shipment)
         readonly = list(self.readonly_fields)
         return readonly
     

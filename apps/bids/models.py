@@ -198,6 +198,13 @@ class Bid(models.Model):
         _('საკონტაქტო ტელეფონი'),
         max_length=20
     )
+    external_user_id = models.CharField(
+        _('გარე მომხმარებლის ID'),
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_('ID from the external platform to identify the specific broker')
+    )
     status = models.CharField(
         _('სტატუსი'),
         max_length=20,
@@ -246,6 +253,7 @@ class Bid(models.Model):
             price=self.price,
             estimated_delivery_time=self.estimated_delivery_time,
             currency=self.currency,
+            external_user_id=self.external_user_id,
             defaults={'rejected_at': timezone.now()}
         )
 
@@ -286,6 +294,13 @@ class RejectedBidCache(models.Model):
         related_name='rejected_bid_cache',
         verbose_name=_('ვალუტა')
     )
+    external_user_id = models.CharField(
+        _('გარე მომხმარებლის ID'),
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_('ID from the external platform to identify the specific broker')
+    )
     rejected_at = models.DateTimeField(
         _('უარყოფის თარიღი'),
         auto_now_add=True
@@ -297,7 +312,7 @@ class RejectedBidCache(models.Model):
         db_table = 'rejected_bids_cache'
         constraints = [
             models.UniqueConstraint(
-                fields=['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency'],
+                fields=['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'external_user_id'],
                 name='unique_rejected_bid'
             )
         ]

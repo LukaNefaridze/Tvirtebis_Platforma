@@ -3,7 +3,8 @@ from .views import (
     MetadataAPIView,
     ShipmentListAPIView,
     ShipmentDetailAPIView,
-    BidCreateAPIView
+    BidCreateAPIView,
+    PlatformBidListAPIView
 )
 
 
@@ -14,4 +15,5 @@ urlpatterns = [
     path('shipments/', ShipmentListAPIView.as_view(), name='shipment-list'),
     path('shipments/<uuid:pk>/', ShipmentDetailAPIView.as_view(), name='shipment-detail'),
     path('shipments/<uuid:pk>/bids/', BidCreateAPIView.as_view(), name='bid-create'),
+    path('my-bids/', PlatformBidListAPIView.as_view(), name='my-bids'),
 ]
