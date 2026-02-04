@@ -8,4 +8,4 @@ class BidsConfig(AppConfig):
     
     def ready(self):
         """Import signals when the app is ready."""
-        import apps.bids.signals  # noqa: F401
+        pass

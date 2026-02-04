@@ -5,27 +5,27 @@ from django.contrib import messages
 from django.urls import reverse
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display, action
-from .models import Broker, BrokerAPIKey, Bid, RejectedBidCache
-from apps.accounts.models import AdminUser, User
+from .models import Platform, PlatformAPIKey, Bid, RejectedBidCache
+from apps.accounts.models import User
 
 
-class BrokerAPIKeyInline(TabularInline):
-    """Inline display of API keys for a broker."""
+class PlatformAPIKeyInline(TabularInline):
+    """Inline display of API keys for a platform."""
     
-    model = BrokerAPIKey
+    model = PlatformAPIKey
     extra = 0
     can_delete = True
     
-    fields = ['id', 'is_active', 'created_at', 'last_used_at']
-    readonly_fields = ['id', 'created_at', 'last_used_at']
+    fields = ['id', 'key', 'is_active', 'created_at', 'last_used_at']
+    readonly_fields = ['id', 'key', 'created_at', 'last_used_at']
     
     verbose_name = _('API გასაღები')
     verbose_name_plural = _('API გასაღებები')
 
 
-@admin.register(Broker)
-class BrokerAdmin(ModelAdmin):
-    """Admin interface for Broker model."""
+@admin.register(Platform)
+class PlatformAdmin(ModelAdmin):
+    """Admin interface for Platform model."""
     
     list_display = ['company_name', 'contact_person', 'contact_email', 'contact_phone', 
                     'is_active_badge', 'api_keys_count', 'bids_count', 'created_at']
@@ -40,10 +40,6 @@ class BrokerAdmin(ModelAdmin):
         (_('საკონტაქტო ინფორმაცია'), {
             'fields': ('contact_person', 'contact_email', 'contact_phone')
         }),
-        (_('ინტეგრაცია'), {
-            'fields': ('webhook_url',),
-            'description': _('URL for receiving bid status notifications (accepted/rejected)')
-        }),
         (_('სისტემური'), {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -51,13 +47,26 @@ class BrokerAdmin(ModelAdmin):
     )
     
     readonly_fields = ['created_at', 'updated_at']
-    inlines = [BrokerAPIKeyInline]
+    inlines = [PlatformAPIKeyInline]
     
-    actions = ['activate_brokers', 'deactivate_brokers', 'generate_api_key']
+    actions = ['activate_platforms', 'deactivate_platforms', 'generate_api_key']
     
-    @display(description=_('სტატუსი'), label=True)
+    @display(description=_('სტატუსი'))
     def is_active_badge(self, obj):
-        return obj.is_active
+        if obj.is_active:
+            label = _('აქტიური')
+            text_color = 'text-emerald-600 dark:text-emerald-400'
+        else:
+            label = _('გაუქმებული')
+            text_color = 'text-rose-600 dark:text-rose-400'
+            
+        return format_html(
+            '<div class="flex justify-center">'
+            '<span class="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 {}" style="min-width: 100px; display: inline-flex; align-items: center;">{}</span>'
+            '</div>',
+            text_color,
+            label
+        )
     
     @display(description=_('API გასაღებები'))
     def api_keys_count(self, obj):
@@ -74,34 +83,34 @@ class BrokerAdmin(ModelAdmin):
         return '0'
     
     @action(description=_('გააქტიურება'))
-    def activate_brokers(self, request, queryset):
+    def activate_platforms(self, request, queryset):
         updated = queryset.update(is_active=True)
-        self.message_user(request, _(f'{updated} ბროკერი გააქტიურდა'), messages.SUCCESS)
+        self.message_user(request, _(f'{updated} პლათფორმა გააქტიურდა'), messages.SUCCESS)
     
     @action(description=_('დეაქტივაცია'))
-    def deactivate_brokers(self, request, queryset):
+    def deactivate_platforms(self, request, queryset):
         updated = queryset.update(is_active=False)
-        self.message_user(request, _(f'{updated} ბროკერი დეაქტიურდა'), messages.SUCCESS)
+        self.message_user(request, _(f'{updated} პლათფორმა დეაქტიურდა'), messages.SUCCESS)
     
     @action(description=_('API გასაღების გენერაცია'))
     def generate_api_key(self, request, queryset):
         """Generate new API keys for selected brokers."""
         api_keys_info = []
         
-        for broker in queryset:
+        for platform in queryset:
             # Generate new API key
-            raw_key = BrokerAPIKey.generate_key()
-            api_key = BrokerAPIKey(broker=broker)
+            raw_key = PlatformAPIKey.generate_key()
+            api_key = PlatformAPIKey(platform=platform)
             api_key.set_key(raw_key)
             api_key.save()
             
-            api_keys_info.append((broker.company_name, raw_key))
+            api_keys_info.append((platform.company_name, raw_key))
         
         # Display all keys to admin (one-time only)
         message_parts = ['<strong>API გასაღებები წარმატებით შეიქმნა:</strong><br><br>']
         for company, key in api_keys_info:
             message_parts.append(f'<strong>{company}</strong>:<br><code>{key}</code><br><br>')
-        message_parts.append('<em>გთხოვთ გადაუგზავნოთ ეს გასაღებები ბროკერებს. ისინი აღარ გამოჩნდება ხელახლა!</em>')
+        message_parts.append('<em>გთხოვთ გადაუგზავნოთ ეს გასაღებები პლათფორმებს. ისინი აღარ გამოჩნდება ხელახლა!</em>')
         
         self.message_user(request, format_html(''.join(message_parts)), messages.SUCCESS)
     
@@ -113,7 +122,7 @@ class BrokerAdmin(ModelAdmin):
         if not change:
             messages.info(
                 request,
-                _('ბროკერი შეიქმნა. გამოიყენეთ "API გასაღების გენერაცია" ქმედება API გასაღების შესაქმნელად.')
+                _('პლათფორმა შეიქმნა. გამოიყენეთ "API გასაღების გენერაცია" ქმედება API გასაღების შესაქმნელად.')
             )
 
 
@@ -121,65 +130,95 @@ class BrokerAdmin(ModelAdmin):
 class BidAdmin(ModelAdmin):
     """Admin interface for Bid model."""
     
-    list_display = ['id_short', 'shipment_link', 'broker_link', 'company_name', 
-                    'price_display', 'estimated_delivery_time', 'status_badge', 'created_at']
+    list_display = ['id_short', 'shipment_info', 'platform_link', 'company_name', 
+                    'price_display', 'estimated_delivery_time', 'status_badge', 'view_details_button', 'created_at']
     list_filter = ['status', 'created_at', 'currency']
-    search_fields = ['company_name', 'broker__company_name', 'contact_person', 
+    search_fields = ['company_name', 'platform__company_name', 'contact_person', 
                      'shipment__pickup_location', 'shipment__delivery_location']
     ordering = ['-created_at']
     
     fieldsets = (
-        (_('განაცხადი და ბროკერი'), {
-            'fields': ('shipment', 'broker')
+        (_('ძირითადი ინფორმაცია'), {
+            'fields': ('shipment', 'platform', 'company_name', 'status')
         }),
-        (_('შეთავაზება'), {
-            'fields': ('company_name', 'price', 'currency', 'estimated_delivery_time', 'comment')
+        (_('შეთავაზების დეტალები'), {
+            'fields': ('price', 'currency', 'estimated_delivery_time', 'comment')
         }),
-        (_('საკონტაქტო'), {
+        (_('საკონტაქტო ინფორმაცია'), {
             'fields': ('contact_person', 'contact_phone')
         }),
-        (_('სტატუსი'), {
-            'fields': ('status', 'created_at', 'updated_at')
+        (_('სისტემური ინფორმაცია'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ['shipment', 'broker', 'company_name', 'price', 'currency', 
+    readonly_fields = ['shipment', 'platform', 'company_name', 'price', 'currency', 
                        'estimated_delivery_time', 'comment', 'contact_person', 
                        'contact_phone', 'status', 'created_at', 'updated_at']
     
-    @display(description=_('ID'))
+    # Disable clickable links - use the explicit "Details" button instead
+    list_display_links = None
+    
+    @display(description=_('ID'), ordering='id')
     def id_short(self, obj):
+        """Display ID as plain text (non-clickable)."""
         return str(obj.id)[:8]
     
     @display(description=_('განაცხადი'))
-    def shipment_link(self, obj):
-        url = reverse('admin:shipments_shipment_change', args=[obj.shipment.pk])
-        return format_html('<a href="{}">{}</a>', url, str(obj.shipment))
+    def shipment_info(self, obj):
+        """Display shipment info as plain text (non-clickable)."""
+        return str(obj.shipment)
     
-    @display(description=_('ბროკერი'))
-    def broker_link(self, obj):
-        url = reverse('admin:bids_broker_change', args=[obj.broker.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.broker.company_name)
+    @display(description=_('პლათფორმა'))
+    def platform_link(self, obj):
+        """Display platform name as plain text (non-clickable to avoid permission issues)."""
+        return obj.platform.company_name
     
     @display(description=_('ფასი'))
     def price_display(self, obj):
         return f"{obj.price} {obj.currency.symbol}"
     
-    @display(description=_('სტატუსი'), label=True)
+    @display(description=_('სტატუსი'))
     def status_badge(self, obj):
-        status_map = {
-            'pending': True,
-            'accepted': 'success',
-            'rejected': False
+        labels = {
+            'pending': _('მოლოდინში'),
+            'accepted': _('მიღებული'),
+            'rejected': _('უარყოფილი'),
         }
-        return status_map.get(obj.status, obj.status)
+        
+        text_colors = {
+            'pending': 'text-amber-600 dark:text-amber-400',
+            'accepted': 'text-green-600 dark:text-green-400',
+            'rejected': 'text-red-600 dark:text-red-400',
+        }
+        
+        label = labels.get(obj.status, obj.status)
+        text_color = text_colors.get(obj.status, 'text-gray-600 dark:text-gray-400')
+        
+        return format_html(
+            '<div class="flex justify-center">'
+            '<span class="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 {}" style="min-width: 100px; display: inline-flex; align-items: center;">{}</span>'
+            '</div>',
+            text_color,
+            label
+        )
+    
+    @display(description=_('მართვა'))
+    def view_details_button(self, obj):
+        """Display a button to view bid details."""
+        url = reverse('admin:bids_bid_change', args=[obj.pk])
+        return format_html(
+            '<a class="button" href="{}" style="background-color: #6c757d; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block;">დეტალები</a>',
+            url
+        )
     
     def get_queryset(self, request):
         """Filter queryset based on user type."""
         qs = super().get_queryset(request)
         
-        # If the logged-in user is a regular User, show only bids on their shipments
-        if isinstance(request.user, User):
+        # If the logged-in user is a regular User (client), show only bids on their shipments
+        if not request.user.is_superuser and getattr(request.user, 'role', '') == 'client':
             return qs.filter(shipment__user=request.user)
         
         return qs
@@ -198,28 +237,53 @@ class BidAdmin(ModelAdmin):
     
     def has_view_permission(self, request, obj=None):
         """Users can view bids on their shipments, AdminUsers can view all."""
-        if isinstance(request.user, AdminUser):
+        # Admins can view all
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
             return True
-        if isinstance(request.user, User):
-            if obj is None:
-                return True  # Can view list
-            # Can view only bids on their own shipments
-            return obj.shipment.user_id == request.user.pk
-        return False
+            
+        # Regular users (clients)
+        if obj is None:
+            return True  # Can view list (filtered by get_queryset)
+            
+        # Can view only bids on their own shipments
+        return obj.shipment.user_id == request.user.pk
+    
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """
+        Override change view to show bids as read-only with clear title.
+        """
+        extra_context = extra_context or {}
+        
+        # Get the bid object
+        obj = self.get_object(request, object_id)
+        
+        if obj:
+            # Show in read-only mode
+            extra_context['show_save'] = False
+            extra_context['show_save_and_continue'] = False
+            extra_context['show_delete_link'] = False
+            
+            # Set appropriate title based on user role
+            if request.user.role == 'client':
+                extra_context['title'] = _('ბიდის დეტალები')
+            else:
+                extra_context['title'] = _('ბიდის ინფორმაცია')
+        
+        return super().change_view(request, object_id, form_url, extra_context)
 
 
 @admin.register(RejectedBidCache)
 class RejectedBidCacheAdmin(ModelAdmin):
     """Admin interface for RejectedBidCache model (read-only)."""
     
-    list_display = ['id_short', 'shipment_link', 'broker_link', 'price', 
+    list_display = ['id_short', 'shipment_link', 'platform_link', 'price', 
                     'estimated_delivery_time', 'currency', 'rejected_at']
     list_filter = ['rejected_at', 'currency']
-    search_fields = ['broker__company_name', 'shipment__pickup_location']
+    search_fields = ['platform__company_name', 'shipment__pickup_location']
     ordering = ['-rejected_at']
     
-    fields = ['shipment', 'broker', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
-    readonly_fields = ['shipment', 'broker', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
+    fields = ['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
+    readonly_fields = ['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
     
     @display(description=_('ID'))
     def id_short(self, obj):
@@ -230,10 +294,10 @@ class RejectedBidCacheAdmin(ModelAdmin):
         url = reverse('admin:shipments_shipment_change', args=[obj.shipment.pk])
         return format_html('<a href="{}">{}</a>', url, str(obj.shipment))
     
-    @display(description=_('ბროკერი'))
-    def broker_link(self, obj):
-        url = reverse('admin:bids_broker_change', args=[obj.broker.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.broker.company_name)
+    @display(description=_('პლათფორმა'))
+    def platform_link(self, obj):
+        url = reverse('admin:bids_platform_change', args=[obj.platform.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.platform.company_name)
     
     def has_add_permission(self, request):
         """Cache entries are created automatically."""

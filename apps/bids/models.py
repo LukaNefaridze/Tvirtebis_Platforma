@@ -5,13 +5,13 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from .managers import BidManager, ActiveBrokerManager
+from .managers import BidManager, ActivePlatformManager
 
 
-class Broker(models.Model):
+class Platform(models.Model):
     """
-    Broker model - external companies that submit bids on shipments.
-    Brokers access the platform via REST API with individual API keys.
+    Platform model - external companies that submit bids on shipments.
+    Platforms access the platform via REST API with individual API keys.
     """
     id = models.UUIDField(
         primary_key=True,
@@ -39,12 +39,6 @@ class Broker(models.Model):
         _('აქტიური'),
         default=True
     )
-    webhook_url = models.URLField(
-        _('Webhook URL'),
-        blank=True,
-        null=True,
-        help_text=_('URL for receiving bid status notifications')
-    )
     created_at = models.DateTimeField(
         _('შექმნის თარიღი'),
         auto_now_add=True
@@ -55,12 +49,12 @@ class Broker(models.Model):
     )
     
     objects = models.Manager()
-    active = ActiveBrokerManager()
+    active = ActivePlatformManager()
     
     class Meta:
-        verbose_name = _('ბროკერი')
-        verbose_name_plural = _('ბროკერები')
-        db_table = 'brokers'
+        verbose_name = _('პლათფორმა')
+        verbose_name_plural = _('პლათფორმები')
+        db_table = 'platforms'
     
     def __str__(self):
         return self.company_name
@@ -71,7 +65,7 @@ class Broker(models.Model):
         return self.is_active
 
 
-class BrokerAPIKey(models.Model):
+class PlatformAPIKey(models.Model):
     """
     API Key for broker authentication.
     Keys are hashed before storage (like passwords).
@@ -81,17 +75,24 @@ class BrokerAPIKey(models.Model):
         default=uuid.uuid4,
         editable=False
     )
-    broker = models.ForeignKey(
-        Broker,
+    platform = models.ForeignKey(
+        Platform,
         on_delete=models.CASCADE,
         related_name='api_keys',
-        verbose_name=_('ბროკერი')
+        verbose_name=_('პლათფორმა')
     )
     api_key_hash = models.CharField(
         _('API გასაღების ჰეში'),
         max_length=128,
         unique=True,
         db_index=True
+    )
+    key = models.CharField(
+        _('API გასაღები'),
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text=_('შენახულია ღია ტექსტად ადმინ პანელში ჩვენებისთვის')
     )
     is_active = models.BooleanField(
         _('აქტიური'),
@@ -110,10 +111,10 @@ class BrokerAPIKey(models.Model):
     class Meta:
         verbose_name = _('API გასაღები')
         verbose_name_plural = _('API გასაღებები')
-        db_table = 'broker_api_keys'
+        db_table = 'platform_api_keys'
     
     def __str__(self):
-        return f"API Key for {self.broker.company_name}"
+        return f"API Key for {self.platform.company_name}"
     
     @staticmethod
     def generate_key():
@@ -122,6 +123,7 @@ class BrokerAPIKey(models.Model):
     
     def set_key(self, raw_key):
         """Hash and store the API key."""
+        self.key = raw_key
         self.api_key_hash = make_password(raw_key)
     
     def check_key(self, raw_key):
@@ -155,16 +157,16 @@ class Bid(models.Model):
         related_name='bids',
         verbose_name=_('განაცხადი')
     )
-    broker = models.ForeignKey(
-        Broker,
+    platform = models.ForeignKey(
+        Platform,
         on_delete=models.CASCADE,
         related_name='bids',
-        verbose_name=_('ბროკერი')
+        verbose_name=_('პლათფორმა')
     )
     company_name = models.CharField(
         _('კომპანიის დასახელება'),
         max_length=200,
-        help_text=_('ბროკერის მიერ წარმოდგენილი კომპანია')
+        help_text=_('პლათფორმის მიერ წარმოდგენილი კომპანია')
     )
     price = models.DecimalField(
         _('ფასი'),
@@ -219,7 +221,7 @@ class Bid(models.Model):
         db_table = 'bids'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['shipment', 'broker', 'status']),
+            models.Index(fields=['shipment', 'platform', 'status']),
         ]
     
     def __str__(self):
@@ -240,7 +242,7 @@ class Bid(models.Model):
         # Cache rejected bid to prevent exact duplicates
         RejectedBidCache.objects.get_or_create(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             price=self.price,
             estimated_delivery_time=self.estimated_delivery_time,
             currency=self.currency,
@@ -264,11 +266,11 @@ class RejectedBidCache(models.Model):
         related_name='rejected_bid_cache',
         verbose_name=_('განაცხადი')
     )
-    broker = models.ForeignKey(
-        Broker,
+    platform = models.ForeignKey(
+        Platform,
         on_delete=models.CASCADE,
         related_name='rejected_bid_cache',
-        verbose_name=_('ბროკერი')
+        verbose_name=_('პლათფორმა')
     )
     price = models.DecimalField(
         _('ფასი'),
@@ -295,10 +297,10 @@ class RejectedBidCache(models.Model):
         db_table = 'rejected_bids_cache'
         constraints = [
             models.UniqueConstraint(
-                fields=['shipment', 'broker', 'price', 'estimated_delivery_time', 'currency'],
+                fields=['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency'],
                 name='unique_rejected_bid'
             )
         ]
     
     def __str__(self):
-        return f"Rejected: {self.broker.company_name} - {self.shipment.id}"
+        return f"Rejected: {self.platform.company_name} - {self.shipment.id}"

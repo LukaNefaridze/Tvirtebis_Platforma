@@ -1,12 +1,12 @@
 from rest_framework import authentication
 from rest_framework import exceptions
 from django.utils.translation import gettext_lazy as _
-from apps.bids.models import BrokerAPIKey
+from apps.bids.models import PlatformAPIKey
 
 
-class BrokerAPIKeyAuthentication(authentication.BaseAuthentication):
+class PlatformAPIKeyAuthentication(authentication.BaseAuthentication):
     """
-    API Key authentication for broker access.
+    API Key authentication for platform access.
     Expects header: Authorization: Bearer {api_key}
     """
     
@@ -14,7 +14,7 @@ class BrokerAPIKeyAuthentication(authentication.BaseAuthentication):
     
     def authenticate(self, request):
         """
-        Authenticate the request and return a two-tuple of (broker, api_key).
+        Authenticate the request and return a two-tuple of (platform, api_key).
         """
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         
@@ -41,22 +41,22 @@ class BrokerAPIKeyAuthentication(authentication.BaseAuthentication):
     
     def authenticate_credentials(self, raw_key):
         """
-        Authenticate the API key and return (broker, api_key).
+        Authenticate the API key and return (platform, api_key).
         """
         # Try to find matching API key by checking all active keys
-        api_keys = BrokerAPIKey.objects.filter(is_active=True).select_related('broker')
+        api_keys = PlatformAPIKey.objects.filter(is_active=True).select_related('platform')
         
         for api_key in api_keys:
             if api_key.check_key(raw_key):
-                # Check if broker is active
-                if not api_key.broker.is_active:
-                    raise exceptions.AuthenticationFailed(_('Broker account is inactive.'))
+                # Check if platform is active
+                if not api_key.platform.is_active:
+                    raise exceptions.AuthenticationFailed(_('Platform account is inactive.'))
                 
                 # Update last used timestamp
                 api_key.mark_used()
                 
-                # Return broker as user and api_key as auth
-                return (api_key.broker, api_key)
+                # Return platform as user and api_key as auth
+                return (api_key.platform, api_key)
         
         # No matching key found
         raise exceptions.AuthenticationFailed(_('Invalid API key.'))

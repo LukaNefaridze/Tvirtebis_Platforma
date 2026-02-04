@@ -98,13 +98,12 @@ DATABASES = {
     }
 }
 
-# Custom User Model (AdminUser is used for Django admin authentication)
-AUTH_USER_MODEL = 'accounts.AdminUser'
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
 
-# Authentication backends - support both AdminUser and regular User login
+# Authentication backends - default Django backend
 AUTHENTICATION_BACKENDS = [
-    'apps.accounts.backends.AdminUserBackend',
-    'apps.accounts.backends.RegularUserBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Password validation
@@ -163,7 +162,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Login/Logout URLs
 LOGIN_URL = '/admin/login/'
-LOGIN_REDIRECT_URL = '/accounts/'
+LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
 # Encryption key for sensitive fields
@@ -172,7 +171,7 @@ FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='')
 # Django REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'apps.api.authentication.BrokerAPIKeyAuthentication',
+        'apps.api.authentication.PlatformAPIKeyAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -244,21 +243,15 @@ UNFOLD = {
                 "separator": True,
                 "items": [
                     {
-                        "title": "ადმინისტრატორები",
-                        "icon": "admin_panel_settings",
-                        "link": "/admin/accounts/adminuser/",
-                        "permission": "config.unfold_navigation.is_admin_user",
-                    },
-                    {
                         "title": "მომხმარებლები",
                         "icon": "people",
                         "link": "/admin/accounts/user/",
                         "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
-                        "title": "ბროკერები",
+                        "title": "პლათფორმა",
                         "icon": "business",
-                        "link": "/admin/bids/broker/",
+                        "link": "/admin/bids/platform/",
                         "permission": "config.unfold_navigation.is_admin_user",
                     },
                 ],
@@ -284,7 +277,7 @@ UNFOLD = {
                     },
                 ],
             },
-            # Admin-only configuration section
+            # Configuration section - visible to all users
             {
                 "title": "კონფიგურაცია",
                 "separator": True,
@@ -293,25 +286,21 @@ UNFOLD = {
                         "title": "ტვირთის ტიპები",
                         "icon": "category",
                         "link": "/admin/metadata/cargotype/",
-                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "ტრანსპორტის ტიპები",
                         "icon": "local_shipping",
                         "link": "/admin/metadata/transporttype/",
-                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "მოცულობის ერთეულები",
                         "icon": "straighten",
                         "link": "/admin/metadata/volumeunit/",
-                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "ვალუტები",
                         "icon": "payments",
                         "link": "/admin/metadata/currency/",
-                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                 ],
             },

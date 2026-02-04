@@ -2,11 +2,11 @@ from django.contrib.auth.models import BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
 
-class AdminUserManager(BaseUserManager):
-    """Manager for AdminUser model."""
+class UserManager(BaseUserManager):
+    """Manager for unified User model."""
     
     def create_user(self, email, password=None, **extra_fields):
-        """Create and save a regular admin user."""
+        """Create and save a regular user."""
         if not email:
             raise ValueError(_('ელ. ფოსტა სავალდებულოა'))
         
@@ -21,6 +21,7 @@ class AdminUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('role', 'admin')
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_('Superuser must have is_staff=True.'))
@@ -28,21 +29,6 @@ class AdminUserManager(BaseUserManager):
             raise ValueError(_('Superuser must have is_superuser=True.'))
         
         return self.create_user(email, password, **extra_fields)
-
-
-class UserManager(BaseUserManager):
-    """Manager for regular User model."""
-    
-    def create_user(self, email, password=None, **extra_fields):
-        """Create and save a regular user."""
-        if not email:
-            raise ValueError(_('ელ. ფოსტა სავალდებულოა'))
-        
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
     
     def active(self):
         """Return only active users."""

@@ -16,7 +16,7 @@ from .serializers import (
     BidCreateSerializer,
     BidResponseSerializer
 )
-from .permissions import IsAuthenticatedBroker
+from .permissions import IsAuthenticatedPlatform
 from ..utils import success_response, error_response
 
 
@@ -49,7 +49,7 @@ class ShipmentListAPIView(generics.ListAPIView):
     GET /api/v1/shipments/
     
     Returns paginated list of shipments.
-    Requires broker authentication.
+    Requires platform authentication.
     
     Query parameters:
     - status: active (default), completed, cancelled
@@ -65,7 +65,7 @@ class ShipmentListAPIView(generics.ListAPIView):
     """
     
     serializer_class = ShipmentListSerializer
-    permission_classes = [IsAuthenticatedBroker]
+    permission_classes = [IsAuthenticatedPlatform]
     
     def get_queryset(self):
         """Return filtered queryset based on query parameters."""
@@ -145,11 +145,11 @@ class ShipmentDetailAPIView(generics.RetrieveAPIView):
     GET /api/v1/shipments/{id}/
     
     Returns detailed information about a specific shipment.
-    Requires broker authentication.
+    Requires platform authentication.
     """
     
     serializer_class = ShipmentDetailSerializer
-    permission_classes = [IsAuthenticatedBroker]
+    permission_classes = [IsAuthenticatedPlatform]
     lookup_field = 'pk'
     
     def get_queryset(self):
@@ -181,7 +181,7 @@ class BidCreateAPIView(APIView):
     POST /api/v1/shipments/{id}/bids/
     
     Submit a bid on a shipment.
-    Requires broker authentication.
+    Requires platform authentication.
     
     Request body:
     {
@@ -195,7 +195,7 @@ class BidCreateAPIView(APIView):
     }
     """
     
-    permission_classes = [IsAuthenticatedBroker]
+    permission_classes = [IsAuthenticatedPlatform]
     
     def post(self, request, pk):
         """Create a new bid on a shipment."""
@@ -217,15 +217,16 @@ class BidCreateAPIView(APIView):
         
         validated_data = serializer.validated_data
         currency = validated_data.pop('currency_obj')
-        broker = request.user  # Broker instance from authentication
+        platform = request.user  # Platform instance from authentication
         
         # Check if bid can be submitted
         can_submit, error_code, error_message = Bid.objects.can_submit_bid(
             shipment=shipment,
-            broker=broker,
+            platform=platform,
             price=validated_data['price'],
             estimated_delivery_time=validated_data['estimated_delivery_time'],
-            currency=currency
+            currency=currency,
+            company_name=validated_data['company_name']
         )
         
         if not can_submit:
@@ -238,7 +239,7 @@ class BidCreateAPIView(APIView):
         # Create bid
         bid = Bid.objects.create(
             shipment=shipment,
-            broker=broker,
+            platform=platform,
             company_name=validated_data['company_name'],
             price=validated_data['price'],
             currency=currency,

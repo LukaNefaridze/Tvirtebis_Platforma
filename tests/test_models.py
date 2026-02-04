@@ -6,7 +6,7 @@ from decimal import Decimal
 from apps.accounts.models import AdminUser, User
 from apps.accounts.utils import generate_temporary_password, validate_personal_id, validate_mobile_number
 from apps.metadata.models import Currency, CargoType, TransportType, VolumeUnit
-from apps.bids.models import Broker, BrokerAPIKey, Bid, RejectedBidCache
+from apps.bids.models import Platform, PlatformAPIKey, Bid, RejectedBidCache
 from apps.shipments.models import Shipment
 
 
@@ -140,15 +140,15 @@ class ShipmentModelTestCase(TestCase):
             preferred_currency=self.currency
         )
         
-        broker = Broker.objects.create(
-            company_name='Test Broker',
-            contact_email='broker@test.com',
+        platform = Platform.objects.create(
+            company_name='Test Platform',
+            contact_email='platform@test.com',
             contact_phone='+995555999888'
         )
         
         bid = Bid.objects.create(
             shipment=shipment,
-            broker=broker,
+            platform=platform,
             company_name='Test Company',
             price=Decimal('250.00'),
             currency=self.currency,
@@ -207,9 +207,9 @@ class BidModelTestCase(TestCase):
             preferred_currency=self.currency
         )
         
-        self.broker = Broker.objects.create(
-            company_name='Test Broker',
-            contact_email='broker@test.com',
+        self.platform = Platform.objects.create(
+            company_name='Test Platform',
+            contact_email='platform@test.com',
             contact_phone='+995555999888'
         )
     
@@ -217,7 +217,7 @@ class BidModelTestCase(TestCase):
         """Test bid creation."""
         bid = Bid.objects.create(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             company_name='Test Company',
             price=Decimal('250.00'),
             currency=self.currency,
@@ -228,13 +228,13 @@ class BidModelTestCase(TestCase):
         
         self.assertEqual(bid.status, 'pending')
         self.assertEqual(bid.shipment, self.shipment)
-        self.assertEqual(bid.broker, self.broker)
+        self.assertEqual(bid.platform, self.platform)
     
     def test_bid_rejection_creates_cache(self):
         """Test that rejecting a bid creates cache entry."""
         bid = Bid.objects.create(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             company_name='Test Company',
             price=Decimal('250.00'),
             currency=self.currency,
@@ -248,7 +248,7 @@ class BidModelTestCase(TestCase):
         # Check cache entry exists
         cache_exists = RejectedBidCache.objects.filter(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             price=Decimal('250.00'),
             estimated_delivery_time=6,
             currency=self.currency
@@ -261,10 +261,11 @@ class BidModelTestCase(TestCase):
         # Should be able to submit first bid
         can_submit, error_code, error_msg = Bid.objects.can_submit_bid(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             price=Decimal('250.00'),
             estimated_delivery_time=6,
-            currency=self.currency
+            currency=self.currency,
+            company_name='Test Company'
         )
         
         self.assertTrue(can_submit)
@@ -272,7 +273,7 @@ class BidModelTestCase(TestCase):
         # Create and reject a bid
         bid = Bid.objects.create(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             company_name='Test Company',
             price=Decimal('250.00'),
             currency=self.currency,
@@ -285,39 +286,40 @@ class BidModelTestCase(TestCase):
         # Should not be able to submit exact duplicate
         can_submit, error_code, error_msg = Bid.objects.can_submit_bid(
             shipment=self.shipment,
-            broker=self.broker,
+            platform=self.platform,
             price=Decimal('250.00'),
             estimated_delivery_time=6,
-            currency=self.currency
+            currency=self.currency,
+            company_name='Test Company'
         )
         
         self.assertFalse(can_submit)
         self.assertEqual(error_code, 'BID_DUPLICATE')
 
 
-class BrokerAPIKeyTestCase(TestCase):
-    """Test BrokerAPIKey model."""
+class PlatformAPIKeyTestCase(TestCase):
+    """Test PlatformAPIKey model."""
     
     def setUp(self):
         """Set up test data."""
-        self.broker = Broker.objects.create(
-            company_name='Test Broker',
-            contact_email='broker@test.com',
+        self.platform = Platform.objects.create(
+            company_name='Test Platform',
+            contact_email='platform@test.com',
             contact_phone='+995555999888'
         )
     
     def test_generate_api_key(self):
         """Test API key generation."""
-        raw_key = BrokerAPIKey.generate_key()
+        raw_key = PlatformAPIKey.generate_key()
         
         self.assertIsNotNone(raw_key)
         self.assertGreater(len(raw_key), 20)
     
     def test_check_api_key(self):
         """Test API key verification."""
-        raw_key = BrokerAPIKey.generate_key()
+        raw_key = PlatformAPIKey.generate_key()
         
-        api_key = BrokerAPIKey(broker=self.broker)
+        api_key = PlatformAPIKey(platform=self.platform)
         api_key.set_key(raw_key)
         api_key.save()
         

@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from apps.accounts.models import AdminUser, User
 from apps.metadata.models import Currency, CargoType, TransportType, VolumeUnit
-from apps.bids.models import Broker, BrokerAPIKey, Bid
+from apps.bids.models import Platform, PlatformAPIKey, Bid
 from apps.shipments.models import Shipment
 
 
@@ -42,15 +42,15 @@ class APITestCase(TestCase):
         self.transport_type = TransportType.objects.create(name='Truck')
         self.volume_unit = VolumeUnit.objects.create(name='Kilogram', abbreviation='kg')
         
-        # Create broker and API key
-        self.broker = Broker.objects.create(
-            company_name='Test Broker',
-            contact_email='broker@test.com',
+        # Create platform and API key
+        self.platform = Platform.objects.create(
+            company_name='Test Platform',
+            contact_email='platform@test.com',
             contact_phone='+995555999888'
         )
         
-        self.raw_api_key = BrokerAPIKey.generate_key()
-        self.api_key = BrokerAPIKey(broker=self.broker)
+        self.raw_api_key = PlatformAPIKey.generate_key()
+        self.api_key = PlatformAPIKey(platform=self.platform)
         self.api_key.set_key(self.raw_api_key)
         self.api_key.save()
         

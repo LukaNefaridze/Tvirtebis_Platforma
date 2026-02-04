@@ -193,7 +193,6 @@ Potential improvements for future iterations:
 2. **Bid History:** Show modification history for bids
 3. **Bulk Actions:** Accept/reject multiple bids at once
 4. **Email Notifications:** Notify brokers when bids are accepted/rejected
-5. **Webhook Integration:** Already supports webhook URLs for bid status notifications
 6. **Analytics:** Dashboard showing bid acceptance rates, average prices, etc.
 7. **Real-time Updates:** WebSocket support for live bid updates
 8. **Mobile App:** Native mobile interface for on-the-go bid management

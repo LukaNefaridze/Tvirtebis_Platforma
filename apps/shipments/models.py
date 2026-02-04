@@ -1,17 +1,17 @@
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from django.db import transaction
+from django.conf import settings
 from .validators import validate_future_date, validate_positive_decimal
 from .managers import ShipmentManager
 
 
 class Shipment(models.Model):
     """
-    Shipment listing created by users (cargo owners).
-    Brokers can submit bids on active shipments via API.
+    Platform listing created by users (cargo owners).
+    Platforms can submit bids on active shipments via API.
     """
     STATUS_CHOICES = [
         ('active', _('აქტიური')),
@@ -25,7 +25,7 @@ class Shipment(models.Model):
         editable=False
     )
     user = models.ForeignKey(
-        'accounts.User',
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='shipments',
         verbose_name=_('განმცხადებელი')

@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 class BidManager(models.Manager):
     """Custom manager for Bid model with business logic."""
     
-    def can_submit_bid(self, shipment, broker, price, estimated_delivery_time, currency):
+    def can_submit_bid(self, shipment, broker, price, estimated_delivery_time, currency, company_name):
         """
         Check if a bid can be submitted.
         Returns (can_submit: bool, error_code: str, error_message: str)
@@ -22,7 +22,7 @@ class BidManager(models.Manager):
         from .models import RejectedBidCache
         duplicate_exists = RejectedBidCache.objects.filter(
             shipment=shipment,
-            broker=broker,
+            platform=platform,
             price=price,
             estimated_delivery_time=estimated_delivery_time,
             currency=currency
@@ -30,12 +30,33 @@ class BidManager(models.Manager):
         
         if duplicate_exists:
             return False, 'BID_DUPLICATE', _('იგივე პარამეტრებით შეთავაზება უკვე გაკეთებული და უარყოფილია')
+
+        # Check for exact duplicate in existing bids (pending, accepted, rejected)
+        if self.filter(
+            shipment=shipment,
+            platform=platform,
+            price=price,
+            estimated_delivery_time=estimated_delivery_time,
+            currency=currency,
+            company_name=company_name
+        ).exists():
+            return False, 'BID_EXACT_DUPLICATE', _('ზუსტად ასეთი შეთავაზება უკვე არსებობს')
+
+        # Check if the price is the same as the previous bid from the same company
+        last_bid = self.filter(
+            shipment=shipment,
+            platform=platform,
+            company_name=company_name
+        ).order_by('-created_at').first()
+
+        if last_bid and last_bid.price == price:
+            return False, 'BID_PRICE_DUPLICATE', _('ფასი უნდა განსხვავდებოდეს წინა შეთავაზებისგან')
         
         return True, None, None
 
 
-class ActiveBrokerManager(models.Manager):
-    """Manager that returns only active brokers."""
+class ActivePlatformManager(models.Manager):
+    """Manager that returns only active platforms."""
     
     def get_queryset(self):
         return super().get_queryset().filter(is_active=True)
