@@ -19,7 +19,7 @@ def login_router(request):
 class CustomPasswordChangeView(PasswordChangeView):
     form_class = CustomPasswordChangeForm
     success_url = reverse_lazy('admin:index')
-    template_name = 'admin/password_change_form.html'
+    template_name = 'registration/password_change_form.html'
 
     def form_valid(self, form):
         # Update the user's flag

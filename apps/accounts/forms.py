@@ -38,10 +38,14 @@ class CustomUserChangeForm(UserChangeForm):
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Apply custom style to all password fields
+        # Remove help text from new password field to hide validation rules by default
+        self.fields['new_password1'].help_text = ''
+        
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'custom-password-input'})
-            
+            # Add custom class to all fields (they are all password inputs)
+            current_class = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = f'{current_class} custom-password-input'.strip()
+
     class Media:
         css = {
             'all': ('css/custom.css',)
