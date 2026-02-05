@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from django.conf import settings
 from .managers import BidManager, ActivePlatformManager
 
 
@@ -46,6 +47,25 @@ class Platform(models.Model):
     updated_at = models.DateTimeField(
         _('განახლების თარიღი'),
         auto_now=True
+    )
+    
+    # Soft delete fields
+    is_deleted = models.BooleanField(
+        _('წაშლილია'),
+        default=False
+    )
+    deleted_at = models.DateTimeField(
+        _('წაშლის თარიღი'),
+        null=True,
+        blank=True
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_platforms',
+        verbose_name=_('წაშალა')
     )
     
     objects = models.Manager()
@@ -218,6 +238,25 @@ class Bid(models.Model):
     updated_at = models.DateTimeField(
         _('განახლების თარიღი'),
         auto_now=True
+    )
+    
+    # Soft delete fields
+    is_deleted = models.BooleanField(
+        _('წაშლილია'),
+        default=False
+    )
+    deleted_at = models.DateTimeField(
+        _('წაშლის თარიღი'),
+        null=True,
+        blank=True
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_bids',
+        verbose_name=_('წაშალა')
     )
     
     objects = BidManager()

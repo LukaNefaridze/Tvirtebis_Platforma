@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 from django.urls import reverse
+from django.utils import timezone
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display, action
 from .models import Platform, PlatformAPIKey, Bid, RejectedBidCache
@@ -49,7 +50,53 @@ class PlatformAdmin(ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
     inlines = [PlatformAPIKeyInline]
     
-    actions = ['activate_platforms', 'deactivate_platforms', 'generate_api_key']
+    actions = ['activate_platforms', 'deactivate_platforms', 'generate_api_key', 'soft_delete_platforms']
+    
+    def get_actions(self, request):
+        """Remove the default delete action - only soft delete is allowed."""
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+    
+    def has_delete_permission(self, request, obj=None):
+        """Disable the delete button on individual platform pages."""
+        return False
+    
+    def get_queryset(self, request):
+        """Filter out soft-deleted platforms from the admin list."""
+        qs = super().get_queryset(request)
+        return qs.filter(is_deleted=False)
+
+    @action(description=_('პლათფორმების წაშლა'))
+    def soft_delete_platforms(self, request, queryset):
+        """
+        Soft delete selected platforms and reject their pending bids.
+        """
+        deleted_count = 0
+        bids_rejected_count = 0
+        
+        for platform in queryset:
+            # Reject all pending bids from this platform
+            pending_bids = Bid.objects.filter(platform=platform, status='pending')
+            for bid in pending_bids:
+                bid.reject()
+                bids_rejected_count += 1
+            
+            # Soft delete the platform
+            platform.is_deleted = True
+            platform.deleted_at = timezone.now()
+            platform.deleted_by = request.user
+            platform.is_active = False  # Also deactivate
+            platform.save()
+            
+            deleted_count += 1
+            
+        self.message_user(
+            request,
+            _(f'{deleted_count} პლათფორმა წაიშალა და {bids_rejected_count} მიმდინარე ბიდი გაუქმდა'),
+            messages.SUCCESS
+        )
     
     @display(description=_('სტატუსი'))
     def is_active_badge(self, obj):
@@ -136,6 +183,30 @@ class BidAdmin(ModelAdmin):
     search_fields = ['company_name', 'platform__company_name', 'contact_person', 
                      'shipment__pickup_location', 'shipment__delivery_location']
     ordering = ['-created_at']
+    actions = ['soft_delete_bids']
+    
+    def get_actions(self, request):
+        """Remove the default delete action - only soft delete is allowed."""
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    @action(description=_('ბიდების წაშლა'))
+    def soft_delete_bids(self, request, queryset):
+        """Soft delete selected bids."""
+        count = queryset.count()
+        queryset.update(
+            is_deleted=True,
+            deleted_at=timezone.now(),
+            deleted_by=request.user,
+            status='rejected'
+        )
+        self.message_user(
+            request,
+            _(f'{count} ბიდი წაიშალა'),
+            messages.SUCCESS
+        )
     
     fieldsets = (
         (_('ძირითადი ინფორმაცია'), {
@@ -217,6 +288,9 @@ class BidAdmin(ModelAdmin):
         """Filter queryset based on user type."""
         qs = super().get_queryset(request)
         
+        # Exclude soft-deleted bids
+        qs = qs.filter(is_deleted=False)
+        
         # If the logged-in user is a regular User (client), show only bids on their shipments
         if not request.user.is_superuser and getattr(request.user, 'role', '') == 'client':
             return qs.filter(shipment__user=request.user)
@@ -228,8 +302,8 @@ class BidAdmin(ModelAdmin):
         return False
     
     def has_delete_permission(self, request, obj=None):
-        """Bids can only be deleted by superusers or admin users."""
-        return request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'
+        """Disable the delete button on individual bid pages."""
+        return False
     
     def has_change_permission(self, request, obj=None):
         """Bids cannot be edited (read-only)."""

@@ -53,7 +53,8 @@ class BidManager(models.Manager):
         ).order_by('-created_at').first()
 
         if last_bid and last_bid.price == price:
-            return False, 'BID_PRICE_DUPLICATE', _('ფასი უნდა განსხვავდებოდეს წინა შეთავაზებისგან')
+            if estimated_delivery_time >= last_bid.estimated_delivery_time:
+                return False, 'BID_PRICE_DUPLICATE', _('იგივე ფასის შემთხვევაში მიწოდების დრო უნდა იყოს ნაკლები')
         
         return True, None, None
 
@@ -62,4 +63,4 @@ class ActivePlatformManager(models.Manager):
     """Manager that returns only active platforms."""
     
     def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)
+        return super().get_queryset().filter(is_active=True, is_deleted=False)

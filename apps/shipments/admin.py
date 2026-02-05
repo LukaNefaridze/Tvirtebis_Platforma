@@ -47,6 +47,11 @@ class BidInline(TabularInline):
         """Bids cannot be deleted directly in admin."""
         return False
     
+    def get_queryset(self, request):
+        """Filter bids to exclude soft-deleted ones."""
+        qs = super().get_queryset(request)
+        return qs.filter(is_deleted=False)
+
     @display(description=_('პლათფორმა'))
     def platform_link(self, obj):
         """Display platform name (as text for clients, as link for admins)."""
@@ -110,6 +115,12 @@ class ShipmentAdminForm(forms.ModelForm):
         input_formats=['%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M:%S']
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'cargo_volume' in self.fields:
+            self.fields['cargo_volume'].widget.attrs['min'] = '0'
+            self.fields['cargo_volume'].widget.attrs['step'] = '1'
+
     class Meta:
         model = Shipment
         fields = '__all__'
@@ -130,7 +141,7 @@ class ShipmentAdmin(ModelAdmin):
     
     fieldsets = (
         (_('განაცხადის ინფორმაცია'), {
-            'fields': ('user', 'status')
+            'fields': ('id', 'user', 'status')
         }),
         (_('მარშრუტი და დრო'), {
             'fields': ('pickup_location', 'pickup_date', 'delivery_location')
@@ -148,8 +159,28 @@ class ShipmentAdmin(ModelAdmin):
         }),
     )
     
-    readonly_fields = ['created_at', 'updated_at', 'completed_at', 'cancelled_at', 'selected_bid', 'status']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'completed_at', 'cancelled_at', 'selected_bid', 'status']
     inlines = [BidInline]
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Override get_form to remove add/change/delete/view icons from metadata fields.
+        """
+        form = super().get_form(request, obj, **kwargs)
+        metadata_fields = ['cargo_type', 'volume_unit', 'transport_type', 'preferred_currency']
+        
+        for field_name in metadata_fields:
+            if field_name in form.base_fields:
+                field = form.base_fields[field_name]
+                if hasattr(field.widget, 'can_add_related'):
+                    field.widget.can_add_related = False
+                if hasattr(field.widget, 'can_change_related'):
+                    field.widget.can_change_related = False
+                if hasattr(field.widget, 'can_delete_related'):
+                    field.widget.can_delete_related = False
+                if hasattr(field.widget, 'can_view_related'):
+                    field.widget.can_view_related = False
+        return form
     
     def get_fieldsets(self, request, obj=None):
         """Hide 'დამატებითი ინფორმაცია' fieldset when adding a new shipment."""

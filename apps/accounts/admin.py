@@ -28,7 +28,7 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
     
-    list_display = ['email', 'get_full_name', 'role', 'is_active_badge', 'is_staff', 'created_at']
+    list_display = ['email', 'first_name', 'last_name', 'role', 'is_staff', 'created_at']
     list_filter = ['role', 'is_active', 'is_staff', 'is_superuser', 'created_at']
     search_fields = ['email', 'first_name', 'last_name', 'company_name', 'personal_id']
     ordering = ['-created_at']

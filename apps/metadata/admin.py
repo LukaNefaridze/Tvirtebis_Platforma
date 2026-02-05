@@ -7,7 +7,7 @@ from .models import CargoType, TransportType, VolumeUnit, Currency
 class BaseMetadataAdmin(ModelAdmin):
     """Base admin class for metadata models."""
     
-    list_display = ['name', 'is_active_badge', 'sort_order', 'created_at']
+    list_display = ['name', 'sort_order']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name']
     list_editable = ['sort_order']
@@ -67,7 +67,7 @@ class TransportTypeAdmin(BaseMetadataAdmin):
 class VolumeUnitAdmin(BaseMetadataAdmin):
     """Admin for volume units."""
     
-    list_display = ['name', 'abbreviation', 'is_active_badge', 'sort_order', 'created_at']
+    list_display = ['name', 'abbreviation', 'sort_order']
     
     fieldsets = (
         (None, {
@@ -84,7 +84,7 @@ class VolumeUnitAdmin(BaseMetadataAdmin):
 class CurrencyAdmin(BaseMetadataAdmin):
     """Admin for currencies."""
     
-    list_display = ['code', 'name', 'symbol', 'is_active_badge', 'sort_order', 'created_at']
+    list_display = ['code', 'name', 'symbol', 'sort_order']
     search_fields = ['code', 'name', 'symbol']
     
     fieldsets = (

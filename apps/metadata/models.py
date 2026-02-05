@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from .managers import ActiveMetadataManager
 
@@ -42,6 +43,16 @@ class BaseMetadata(models.Model):
     class Meta:
         abstract = True
         ordering = ['sort_order', 'name']
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            ModelClass = self.__class__
+            if ModelClass.objects.filter(sort_order=self.sort_order).exists():
+                self.sort_order += 1
+                ModelClass.objects.filter(
+                    sort_order__gte=self.sort_order
+                ).update(sort_order=F('sort_order') + 1)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
