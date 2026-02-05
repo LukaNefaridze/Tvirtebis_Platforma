@@ -115,6 +115,25 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
     
+    # Soft delete fields
+    is_deleted = models.BooleanField(
+        _('წაშლილია'),
+        default=False
+    )
+    deleted_at = models.DateTimeField(
+        _('წაშლის თარიღი'),
+        null=True,
+        blank=True
+    )
+    deleted_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_users',
+        verbose_name=_('წაშალა')
+    )
+    
     objects = UserManager()
     
     USERNAME_FIELD = 'email'

@@ -75,6 +75,9 @@ class ShipmentListAPIView(generics.ListAPIView):
             bids_count=Count('bids')
         )
         
+        # Exclude shipments from soft-deleted users
+        queryset = queryset.filter(user__is_deleted=False)
+        
         # Filter by status (default: active)
         status_filter = self.request.query_params.get('status', 'active')
         if status_filter in ['active', 'completed', 'cancelled']:
@@ -153,9 +156,11 @@ class ShipmentDetailAPIView(generics.RetrieveAPIView):
     lookup_field = 'pk'
     
     def get_queryset(self):
-        """Return queryset with related objects."""
+        """Return queryset with related objects, excluding soft-deleted users."""
         return Shipment.objects.select_related(
             'user', 'cargo_type', 'volume_unit', 'transport_type', 'preferred_currency'
+        ).filter(
+            user__is_deleted=False
         ).annotate(
             bids_count=Count('bids')
         )
@@ -199,8 +204,8 @@ class BidCreateAPIView(APIView):
     
     def post(self, request, pk):
         """Create a new bid on a shipment."""
-        # Get shipment
-        shipment = get_object_or_404(Shipment, pk=pk)
+        # Get shipment (exclude shipments from soft-deleted users)
+        shipment = get_object_or_404(Shipment, pk=pk, user__is_deleted=False)
         
         # Validate request data
         serializer = BidCreateSerializer(

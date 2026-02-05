@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django import forms
+from django_flatpickr.widgets import DateTimePickerInput
+from django_flatpickr.schemas import FlatpickrOptions
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
@@ -97,10 +100,26 @@ class BidInline(TabularInline):
         return obj.get_status_display()
 
 
+
+class ShipmentAdminForm(forms.ModelForm):
+    pickup_date = forms.DateTimeField(
+        label=_('ტვირთის აღების თარიღი და დრო'),
+        widget=DateTimePickerInput(options=FlatpickrOptions(
+            time_24hr=True,
+        ), attrs={'class': 'custom-datepicker'}),
+        input_formats=['%Y-%m-%d %H:%M', '%Y-%m-%d %H:%M:%S']
+    )
+
+    class Meta:
+        model = Shipment
+        fields = '__all__'
+
+
 @admin.register(Shipment)
 class ShipmentAdmin(ModelAdmin):
     """Admin interface for Shipment model."""
     
+    form = ShipmentAdminForm
     list_display = ['id_short', 'user_name', 'route', 'pickup_date', 'cargo_info', 
                     'transport_type_display', 'currency_display', 'status_badge', 
                     'bids_count_display', 'view_bids_button', 'created_at']
@@ -131,6 +150,34 @@ class ShipmentAdmin(ModelAdmin):
     
     readonly_fields = ['created_at', 'updated_at', 'completed_at', 'cancelled_at', 'selected_bid', 'status']
     inlines = [BidInline]
+    
+    def get_fieldsets(self, request, obj=None):
+        """Hide 'დამატებითი ინფორმაცია' fieldset when adding a new shipment."""
+        if obj is None:
+            # Add view - show only relevant fieldsets
+            return (
+                (_('განაცხადის ინფორმაცია'), {
+                    'fields': ('user',)  # no status for new shipments
+                }),
+                (_('მარშრუტი და დრო'), {
+                    'fields': ('pickup_location', 'pickup_date', 'delivery_location')
+                }),
+                (_('ტვირთის ინფორმაცია'), {
+                    'fields': ('cargo_type', 'cargo_volume', 'volume_unit', 'transport_type', 'preferred_currency')
+                }),
+                (_('დამატებითი პირობები'), {
+                    'fields': ('additional_conditions',),
+                    'classes': ('collapse',)
+                }),
+            )
+        # Change view - show all fieldsets including დამატებითი ინფორმაცია
+        return self.fieldsets
+    
+    def get_inlines(self, request, obj=None):
+        """Only show შეთავაზებები (BidInline) for existing shipments."""
+        if obj is None:
+            return []  # No inlines for add view
+        return [BidInline]
     
     actions = ['cancel_shipments', 'reject_all_bids_action']
     
@@ -193,15 +240,9 @@ class ShipmentAdmin(ModelAdmin):
     def view_bids_button(self, obj):
         """Display a button to view and manage bids."""
         url = reverse('admin:shipments_shipment_change', args=[obj.pk])
-        if obj.status == 'active' and obj.pending_bids_count > 0:
+        if obj.status == 'active':
             return format_html(
-                '<a class="button" href="{}" style="background-color: #417690; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block;">ბიდების ნახვა ({})</a>',
-                url,
-                obj.pending_bids_count
-            )
-        elif obj.status == 'active':
-            return format_html(
-                '<a class="button" href="{}" style="background-color: #6c757d; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block;">ნახვა</a>',
+                '<a class="button" href="{}" style="background-color: #417690; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block;">დეტალები</a>',
                 url
             )
         else:
@@ -330,6 +371,7 @@ class ShipmentAdmin(ModelAdmin):
     def get_queryset(self, request):
         """
         Filter queryset based on user type.
+        Also excludes shipments from soft-deleted users.
         """
         qs = super().get_queryset(request)
         
@@ -347,6 +389,9 @@ class ShipmentAdmin(ModelAdmin):
             'bids__currency'
         )
         
+        # Exclude shipments from soft-deleted users
+        qs = qs.filter(user__is_deleted=False)
+        
         # If the logged-in user is not a superuser/admin, show only their shipments
         if not request.user.is_superuser and request.user.role == 'client':
              return qs.filter(user=request.user)
@@ -354,7 +399,9 @@ class ShipmentAdmin(ModelAdmin):
         return qs
     
     def has_add_permission(self, request):
-        """Authenticated users can create shipments."""
+        """Only clients can create shipments, admins cannot."""
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            return False
         return request.user.is_authenticated
     
     def has_view_permission(self, request, obj=None):
@@ -416,11 +463,19 @@ class ShipmentAdmin(ModelAdmin):
         return readonly
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Filter user field based on permissions."""
+        """Filter user field based on permissions and exclude deleted users."""
         if db_field.name == 'user':
             if not request.user.is_superuser and request.user.role == 'client':
                 # Regular users can only select themselves
-                kwargs['queryset'] = User.objects.filter(pk=request.user.pk)
+                kwargs['queryset'] = User.objects.filter(pk=request.user.pk, is_deleted=False)
                 kwargs['initial'] = request.user.pk
+            else:
+                # Admins see all non-deleted users
+                kwargs['queryset'] = User.objects.filter(is_deleted=False)
         
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    class Media:
+        css = {
+            'all': ('css/custom.css',)
+        }

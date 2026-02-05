@@ -132,7 +132,7 @@ class BidAdmin(ModelAdmin):
     
     list_display = ['id_short', 'shipment_info', 'platform_link', 'company_name', 
                     'price_display', 'estimated_delivery_time', 'status_badge', 'view_details_button', 'created_at']
-    list_filter = ['status', 'created_at', 'currency']
+    list_filter = ['status', 'shipment__user', 'created_at', 'currency']
     search_fields = ['company_name', 'platform__company_name', 'contact_person', 
                      'shipment__pickup_location', 'shipment__delivery_location']
     ordering = ['-created_at']
@@ -228,8 +228,8 @@ class BidAdmin(ModelAdmin):
         return False
     
     def has_delete_permission(self, request, obj=None):
-        """Bids should not be deleted (keep for audit trail)."""
-        return False
+        """Bids can only be deleted by superusers or admin users."""
+        return request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'
     
     def has_change_permission(self, request, obj=None):
         """Bids cannot be edited (read-only)."""
@@ -304,8 +304,8 @@ class RejectedBidCacheAdmin(ModelAdmin):
         return False
     
     def has_delete_permission(self, request, obj=None):
-        """Keep cache entries for audit trail."""
-        return False
+        """Cache entries can only be deleted by superusers or admin users."""
+        return request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'
     
     def has_change_permission(self, request, obj=None):
         """Cache entries are read-only."""

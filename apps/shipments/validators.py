@@ -8,7 +8,7 @@ def validate_future_date(date):
     """
     Validate that the pickup date is in the future.
     """
-    if date <= timezone.now():
+    if date and date <= timezone.now():
         raise ValidationError(_('ტვირთის აღების თარიღი უნდა იყოს მომავალში'))
     return date
 
@@ -17,7 +17,7 @@ def validate_positive_decimal(value):
     """
     Validate that a decimal value is positive.
     """
-    if value <= Decimal('0'):
+    if value is not None and value <= Decimal('0'):
         raise ValidationError(_('მნიშვნელობა უნდა იყოს დადებითი'))
     return value
 

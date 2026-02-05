@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Third party apps
+    'django_flatpickr',
     'rest_framework',
     'encrypted_model_fields',
     
@@ -269,6 +270,7 @@ UNFOLD = {
                         "title": "ახალი განაცხადი",
                         "icon": "add_circle",
                         "link": "/admin/shipments/shipment/add/",
+                        "permission": "config.unfold_navigation.is_regular_user",
                     },
                     {
                         "title": "ბიდები",
@@ -277,7 +279,7 @@ UNFOLD = {
                     },
                 ],
             },
-            # Configuration section - visible to all users
+            # Configuration section - visible only to admins
             {
                 "title": "კონფიგურაცია",
                 "separator": True,
@@ -286,21 +288,25 @@ UNFOLD = {
                         "title": "ტვირთის ტიპები",
                         "icon": "category",
                         "link": "/admin/metadata/cargotype/",
+                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "ტრანსპორტის ტიპები",
                         "icon": "local_shipping",
                         "link": "/admin/metadata/transporttype/",
+                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "მოცულობის ერთეულები",
                         "icon": "straighten",
                         "link": "/admin/metadata/volumeunit/",
+                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                     {
                         "title": "ვალუტები",
                         "icon": "payments",
                         "link": "/admin/metadata/currency/",
+                        "permission": "config.unfold_navigation.is_admin_user",
                     },
                 ],
             },

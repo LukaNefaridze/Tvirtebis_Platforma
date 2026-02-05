@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 from django.utils.html import format_html
+from django.utils import timezone
 from unfold.admin import ModelAdmin
 from unfold.decorators import display, action
 from .models import User
@@ -31,7 +32,40 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
     list_filter = ['role', 'is_active', 'is_staff', 'is_superuser', 'created_at']
     search_fields = ['email', 'first_name', 'last_name', 'company_name', 'personal_id']
     ordering = ['-created_at']
-    actions = ['reset_password_action']
+    actions = ['reset_password_action', 'delete_users']
+    
+    def get_actions(self, request):
+        """Remove the default delete action - only soft delete is allowed."""
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+    
+    def has_delete_permission(self, request, obj=None):
+        """Disable the delete button on individual user pages."""
+        return False
+    
+    def get_queryset(self, request):
+        """Filter out soft-deleted users from the admin list."""
+        qs = super().get_queryset(request)
+        # Always exclude deleted users from the list
+        return qs.filter(is_deleted=False)
+    
+    @action(description=_('მომხმარებლების წაშლა'))
+    def delete_users(self, request, queryset):
+        """Delete selected users (soft delete - data preserved in database)."""
+        count = queryset.count()
+        queryset.update(
+            is_deleted=True,
+            deleted_at=timezone.now(),
+            deleted_by=request.user,
+            is_active=False
+        )
+        self.message_user(
+            request,
+            _(f'{count} მომხმარებელი წაიშალა'),
+            messages.SUCCESS
+        )
     
     change_form_template = 'admin/accounts/user/change_form.html'
     
