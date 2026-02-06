@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin import helpers
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
@@ -23,6 +24,9 @@ class PlatformAPIKeyInline(TabularInline):
     verbose_name = _('API გასაღები')
     verbose_name_plural = _('API გასაღებები')
 
+    def has_add_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(Platform)
 class PlatformAdmin(ModelAdmin):
@@ -34,18 +38,25 @@ class PlatformAdmin(ModelAdmin):
     search_fields = ['company_name', 'contact_email', 'contact_person', 'contact_phone']
     ordering = ['-created_at']
     
-    fieldsets = (
-        (_('კომპანიის ინფორმაცია'), {
-            'fields': ('company_name', 'is_active')
-        }),
-        (_('საკონტაქტო ინფორმაცია'), {
-            'fields': ('contact_person', 'contact_email', 'contact_phone')
-        }),
-        (_('სისტემური'), {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            (_('კომპანიის ინფორმაცია'), {
+                'fields': ('company_name', 'is_active')
+            }),
+            (_('საკონტაქტო ინფორმაცია'), {
+                'fields': ('contact_person', 'contact_email', 'contact_phone')
+            }),
+        ]
+        
+        if obj:
+            fieldsets.append(
+                (_('სისტემური'), {
+                    'fields': ('created_at', 'updated_at'),
+                    'classes': ('collapse',)
+                })
+            )
+        
+        return fieldsets
     
     readonly_fields = ['created_at', 'updated_at']
     inlines = [PlatformAPIKeyInline]
@@ -68,11 +79,7 @@ class PlatformAdmin(ModelAdmin):
         qs = super().get_queryset(request)
         return qs.filter(is_deleted=False)
 
-    @action(description=_('პლათფორმების წაშლა'))
-    def soft_delete_platforms(self, request, queryset):
-        """
-        Soft delete selected platforms and reject their pending bids.
-        """
+    def _perform_soft_delete(self, request, queryset):
         deleted_count = 0
         bids_rejected_count = 0
         
@@ -97,6 +104,42 @@ class PlatformAdmin(ModelAdmin):
             _(f'{deleted_count} პლათფორმა წაიშალა და {bids_rejected_count} მიმდინარე ბიდი გაუქმდა'),
             messages.SUCCESS
         )
+
+    @action(description=_('პლათფორმების წაშლა'))
+    def soft_delete_platforms(self, request, queryset):
+        """
+        Soft delete selected platforms and reject their pending bids.
+        """
+        # Check if confirmation is already given
+        if request.POST.get('confirm_delete'):
+            self._perform_soft_delete(request, queryset)
+            return
+
+        # Check for active bids
+        platforms_with_bids = []
+        for platform in queryset:
+            pending_count = platform.bids.filter(status='pending').count()
+            if pending_count > 0:
+                platforms_with_bids.append({
+                    'platform': platform,
+                    'count': pending_count
+                })
+        
+        # If there are platforms with active bids, show confirmation
+        if platforms_with_bids:
+            from django.shortcuts import render
+            
+            context = {
+                'platforms_with_bids': platforms_with_bids,
+                'queryset': queryset,
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+                'opts': self.model._meta,
+                'title': _('პლათფორმების წაშლის დადასტურება'),
+            }
+            return render(request, 'admin/bids/platform/soft_delete_confirmation.html', context)
+            
+        # If no active bids, proceed directly
+        self._perform_soft_delete(request, queryset)
     
     @display(description=_('სტატუსი'))
     def is_active_badge(self, obj):
@@ -210,7 +253,7 @@ class BidAdmin(ModelAdmin):
     
     fieldsets = (
         (_('ძირითადი ინფორმაცია'), {
-            'fields': ('shipment', 'platform', 'company_name', 'status')
+            'fields': ('id', 'shipment', 'platform', 'company_name', 'status')
         }),
         (_('შეთავაზების დეტალები'), {
             'fields': ('price', 'currency', 'estimated_delivery_time', 'comment')
@@ -224,7 +267,7 @@ class BidAdmin(ModelAdmin):
         }),
     )
     
-    readonly_fields = ['shipment', 'platform', 'company_name', 'price', 'currency', 
+    readonly_fields = ['id', 'shipment', 'platform', 'company_name', 'price', 'currency', 
                        'estimated_delivery_time', 'comment', 'contact_person', 
                        'contact_phone', 'status', 'created_at', 'updated_at']
     
