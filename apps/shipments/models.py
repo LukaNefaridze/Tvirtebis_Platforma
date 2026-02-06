@@ -1,5 +1,6 @@
 import uuid
 from django.db import models, transaction
+from django.db.models import Max
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -23,6 +24,12 @@ class Shipment(models.Model):
         primary_key=True,
         default=uuid.uuid4,
         editable=False
+    )
+    display_id = models.PositiveIntegerField(
+        _('Display ID'),
+        editable=False,
+        null=True,
+        unique=True
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -113,6 +120,25 @@ class Shipment(models.Model):
         blank=True
     )
     
+    # Soft delete fields
+    is_deleted = models.BooleanField(
+        _('წაშლილია'),
+        default=False
+    )
+    deleted_at = models.DateTimeField(
+        _('წაშლის თარიღი'),
+        null=True,
+        blank=True
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_shipments',
+        verbose_name=_('წაშალა')
+    )
+    
     objects = ShipmentManager()
     
     class Meta:
@@ -144,6 +170,12 @@ class Shipment(models.Model):
         super().clean()
         validate_future_date(self.pickup_date)
         validate_positive_decimal(self.cargo_volume)
+
+    def save(self, *args, **kwargs):
+        if self.display_id is None:
+            max_id = Shipment.objects.aggregate(Max('display_id'))['display_id__max']
+            self.display_id = (max_id or 0) + 1
+        super().save(*args, **kwargs)
     
     @transaction.atomic
     def mark_completed(self, bid):

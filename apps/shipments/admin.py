@@ -23,9 +23,9 @@ class BidInline(TabularInline):
     extra = 0
     can_delete = False
     
-    fields = ['platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
+    fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
               'contact_info', 'status_badge', 'created_at', 'actions_buttons']
-    readonly_fields = ['platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
+    readonly_fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
                        'contact_info', 'status_badge', 'created_at', 'actions_buttons']
     
     verbose_name = _('შეთავაზება')

@@ -60,6 +60,7 @@ class ShipmentListSerializer(serializers.ModelSerializer):
         model = Shipment
         fields = [
             'id',
+            'display_id',
             'pickup_location',
             'pickup_date',
             'delivery_location',
@@ -175,6 +176,7 @@ class BidResponseSerializer(serializers.ModelSerializer):
         model = Bid
         fields = [
             'id',
+            'display_id',
             'shipment_id',
             'company_name',
             'price',

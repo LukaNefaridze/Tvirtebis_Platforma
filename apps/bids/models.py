@@ -1,6 +1,7 @@
 import uuid
 import secrets
 from django.db import models
+from django.db.models import Max
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
@@ -171,6 +172,12 @@ class Bid(models.Model):
         default=uuid.uuid4,
         editable=False
     )
+    display_id = models.PositiveIntegerField(
+        _('Display ID'),
+        editable=False,
+        null=True,
+        unique=True
+    )
     shipment = models.ForeignKey(
         'shipments.Shipment',
         on_delete=models.CASCADE,
@@ -272,6 +279,12 @@ class Bid(models.Model):
     
     def __str__(self):
         return f"{self.company_name} - {self.price} {self.currency.code}"
+
+    def save(self, *args, **kwargs):
+        if self.display_id is None:
+            max_id = Bid.objects.aggregate(Max('display_id'))['display_id__max']
+            self.display_id = (max_id or 0) + 1
+        super().save(*args, **kwargs)
     
     def accept(self):
         """Mark bid as accepted."""

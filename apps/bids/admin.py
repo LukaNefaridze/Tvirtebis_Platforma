@@ -11,6 +11,8 @@ from .models import Platform, PlatformAPIKey, Bid, RejectedBidCache
 from apps.accounts.models import User
 
 
+
+
 class PlatformAPIKeyInline(TabularInline):
     """Inline display of API keys for a platform."""
     
@@ -220,10 +222,17 @@ class PlatformAdmin(ModelAdmin):
 class BidAdmin(ModelAdmin):
     """Admin interface for Bid model."""
     
-    list_display = ['id_short', 'shipment_info', 'platform_link', 'company_name', 
+    list_display = ['display_id', 'shipment_info', 'platform_link', 'company_name', 
                     'price_display', 'estimated_delivery_time', 'status_badge', 'view_details_button', 'created_at']
-    list_filter = ['status', 'shipment__user', 'created_at', 'currency']
-    search_fields = ['company_name', 'platform__company_name', 'contact_person', 
+    def get_list_filter(self, request):
+        """
+        Return list_filter based on user role.
+        Clients do not need to filter by 'shipment__user' (Applicant) as they only see their own bids.
+        """
+        filters = ['status', 'created_at', 'currency']
+            
+        return filters
+    search_fields = ['display_id', 'company_name', 'platform__company_name', 'contact_person', 
                      'shipment__pickup_location', 'shipment__delivery_location']
     ordering = ['-created_at']
     actions = ['soft_delete_bids']
@@ -253,7 +262,7 @@ class BidAdmin(ModelAdmin):
     
     fieldsets = (
         (_('ძირითადი ინფორმაცია'), {
-            'fields': ('id', 'shipment', 'platform', 'company_name', 'status')
+            'fields': ('display_id', 'id', 'shipment', 'platform', 'company_name', 'status')
         }),
         (_('შეთავაზების დეტალები'), {
             'fields': ('price', 'currency', 'estimated_delivery_time', 'comment')
@@ -267,17 +276,12 @@ class BidAdmin(ModelAdmin):
         }),
     )
     
-    readonly_fields = ['id', 'shipment', 'platform', 'company_name', 'price', 'currency', 
+    readonly_fields = ['display_id', 'id', 'shipment', 'platform', 'company_name', 'price', 'currency', 
                        'estimated_delivery_time', 'comment', 'contact_person', 
                        'contact_phone', 'status', 'created_at', 'updated_at']
     
     # Disable clickable links - use the explicit "Details" button instead
     list_display_links = None
-    
-    @display(description=_('ID'), ordering='id')
-    def id_short(self, obj):
-        """Display ID as plain text (non-clickable)."""
-        return str(obj.id)[:8]
     
     @display(description=_('განაცხადი'))
     def shipment_info(self, obj):
@@ -336,7 +340,7 @@ class BidAdmin(ModelAdmin):
         
         # If the logged-in user is a regular User (client), show only bids on their shipments
         if not request.user.is_superuser and getattr(request.user, 'role', '') == 'client':
-            return qs.filter(shipment__user=request.user)
+            return qs.filter(shipment__user=request.user, shipment__is_deleted=False)
         
         return qs
     
