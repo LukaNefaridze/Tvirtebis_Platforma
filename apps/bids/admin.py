@@ -13,6 +13,22 @@ from apps.accounts.models import User
 
 
 
+class ShipmentUserFilter(admin.SimpleListFilter):
+    title = _('განმცხადებელი')
+    parameter_name = 'shipment__user'
+
+    def lookups(self, request, model_admin):
+        # Get distinct users who have shipments related to bids, excluding deleted users
+        user_ids = Bid.objects.values_list('shipment__user', flat=True).distinct()
+        users = User.objects.filter(id__in=user_ids, is_deleted=False).order_by('first_name', 'last_name')
+        return [(u.id, str(u)) for u in users]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(shipment__user__id=self.value())
+        return queryset
+
+
 class PlatformAPIKeyInline(TabularInline):
     """Inline display of API keys for a platform."""
     
@@ -230,6 +246,10 @@ class BidAdmin(ModelAdmin):
         Clients do not need to filter by 'shipment__user' (Applicant) as they only see their own bids.
         """
         filters = ['status', 'created_at', 'currency']
+        
+        # Add ShipmentUserFilter only for admins/superusers
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            filters.insert(1, ShipmentUserFilter)
             
         return filters
     search_fields = ['display_id', 'company_name', 'platform__company_name', 'contact_person', 
