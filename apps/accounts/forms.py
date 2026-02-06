@@ -1,17 +1,38 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, PasswordChangeForm
+from django.utils.safestring import mark_safe
 from .models import User
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'role')
+        fields = ('email', 'first_name', 'last_name', 'role', 'personal_id', 'mobile', 'company_name', 'company_id_number', 'address')
+
+    class Media:
+        css = {
+            'all': ('css/custom.css',)
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Make password fields optional
         self.fields['password1'].required = False
         self.fields['password2'].required = False
+        
+        # Set custom help text for password field
+        help_texts = [
+            "პაროლი უნდა შეიცავდეს მინიმუმ 8 სიმბოლოს.",
+            "პაროლი არ უნდა შედგებოდეს მხოლოდ ციფრებისგან.",
+            "პაროლი არ უნდა იყოს ფართოდ გავრცელებული (მაგ: password123).",
+            "პაროლი არ უნდა ჰგავდეს თქვენს პირად მონაცემებს (სახელი, გვარი, ელ-ფოსტა)."
+        ]
+        self.fields['password1'].help_text = mark_safe("<br>".join(help_texts))
+
+        for field_name in ['password1', 'password2']:
+            if field_name in self.fields:
+                # Add custom class to all fields (they are all password inputs)
+                current_class = self.fields[field_name].widget.attrs.get('class', '')
+                self.fields[field_name].widget.attrs['class'] = f'{current_class} custom-password-input'.strip()
 
 class CustomUserChangeForm(UserChangeForm):
     new_password = forms.CharField(

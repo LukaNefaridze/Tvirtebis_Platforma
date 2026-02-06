@@ -68,6 +68,7 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
         )
     
     change_form_template = 'admin/accounts/user/change_form.html'
+    add_form_template = 'admin/accounts/user/change_form.html'
     
     # Define fieldsets for different sections
     fieldsets = (
@@ -93,7 +94,7 @@ class UserAdmin(ModelAdmin, BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'role', 'password1', 'password2', 'is_active', 'is_staff'),
+            'fields': ('email', 'first_name', 'last_name', 'role', 'personal_id', 'mobile', 'company_name', 'company_id_number', 'address', 'password1', 'password2', 'is_active', 'is_staff'),
         }),
     )
     
