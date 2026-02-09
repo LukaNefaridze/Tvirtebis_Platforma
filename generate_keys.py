@@ -8,5 +8,6 @@ field_key = Fernet.generate_key().decode()
 with open(".env", "w") as f:
     f.write(f"SECRET_KEY={secret_key}\n")
     f.write(f"FIELD_ENCRYPTION_KEY={field_key}\n")
+    f.write(f"ALLOWED_HOSTS=127.0.0.1,localhost,192.168.80.230\n")
 
-print("✅ Generated .env file with SECRET_KEY and FIELD_ENCRYPTION_KEY")
+print("✅ Generated .env file with SECRET_KEY, FIELD_ENCRYPTION_KEY and ALLOWED_HOSTS")
