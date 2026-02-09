@@ -23,7 +23,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . .
 
-# Static files-ის შეგროვება
+# Generate .env file with SECRET_KEY and FIELD_ENCRYPTION_KEY
+RUN python generate_keys.py
+
+# Ensure Django reads .env (set path for dotenv if needed)
+ENV DOTENV_PATH=/app/.env
+
+# Collect static files
 RUN python manage.py collectstatic --noinput --settings=config.settings
 
 # Django run port

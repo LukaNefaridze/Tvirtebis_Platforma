@@ -6,6 +6,7 @@ from pathlib import Path
 import environ
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from dotenv import load_dotenv
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -167,6 +168,9 @@ LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
 # Encryption key for sensitive fields
+load_dotenv(dotenv_path=os.environ.get('DOTENV_PATH', '.env'))
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')
 
 # Django REST Framework settings
