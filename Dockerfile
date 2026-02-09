@@ -37,4 +37,5 @@ RUN python manage.py collectstatic --noinput --settings=config.settings
 EXPOSE 8000
 
 # Run server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:6048", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
+
