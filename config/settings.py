@@ -281,7 +281,7 @@ UNFOLD = {
             },
             # Configuration section - visible only to admins
             {
-                "title": "",
+                "title": "კონფიგურაცია",
                 "separator": True,
                 "items": [
                     {

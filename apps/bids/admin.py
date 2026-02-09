@@ -15,7 +15,7 @@ from apps.accounts.models import User
 
 class ShipmentUserFilter(admin.SimpleListFilter):
     title = _('განმცხადებელი')
-    parameter_name = 'shipment__user'
+    parameter_name = 'applicant'
 
     def lookups(self, request, model_admin):
         # Get distinct users who have shipments related to bids, excluding deleted users
@@ -258,10 +258,13 @@ class BidAdmin(ModelAdmin):
     actions = ['soft_delete_bids']
     
     def get_actions(self, request):
-        """Remove the default delete action - only soft delete is allowed."""
+        """Remove the default delete action; admins cannot soft-delete (reject) bids."""
         actions = super().get_actions(request)
         if 'delete_selected' in actions:
             del actions['delete_selected']
+        # Admins and superusers cannot accept or reject bids - hide soft_delete_bids
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            actions.pop('soft_delete_bids', None)
         return actions
 
     @action(description=_('ბიდების წაშლა'))

@@ -135,7 +135,8 @@ class BidAPITestCase(APITestCase):
             'estimated_delivery_time': 6,
             'comment': 'Fast delivery',
             'contact_person': 'John Doe',
-            'contact_phone': '+995555999888'
+            'contact_phone': '+995555999888',
+            'driver_id': 'driver-001'
         }
         
         response = self.client.post(
@@ -161,7 +162,8 @@ class BidAPITestCase(APITestCase):
             'currency': 'USD',  # Wrong currency
             'estimated_delivery_time': 6,
             'contact_person': 'John Doe',
-            'contact_phone': '+995555999888'
+            'contact_phone': '+995555999888',
+            'driver_id': 'driver-001'
         }
         
         response = self.client.post(
@@ -182,7 +184,8 @@ class BidAPITestCase(APITestCase):
             'currency': 'GEL',
             'estimated_delivery_time': 6,
             'contact_person': 'John Doe',
-            'contact_phone': '+995555999888'
+            'contact_phone': '+995555999888',
+            'driver_id': 'driver-001'
         }
         
         # Create first bid

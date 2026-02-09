@@ -16,6 +16,22 @@ from apps.bids.models import Bid
 User = get_user_model()
 
 
+class ShipmentUserFilter(admin.SimpleListFilter):
+    """Filter shipments by the user who made the listing. Admin only."""
+    title = _('განმცხადებელი')
+    parameter_name = 'applicant'
+
+    def lookups(self, request, model_admin):
+        user_ids = Shipment.objects.values_list('user', flat=True).distinct()
+        users = User.objects.filter(id__in=user_ids, is_deleted=False).order_by('first_name', 'last_name')
+        return [(u.id, str(u)) for u in users]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(user_id=self.value())
+        return queryset
+
+
 class BidInline(TabularInline):
     """Inline display of bids for a shipment."""
     
@@ -51,6 +67,11 @@ class BidInline(TabularInline):
         """Filter bids to exclude soft-deleted ones."""
         qs = super().get_queryset(request)
         return qs.filter(is_deleted=False)
+
+    def get_formset(self, request, obj=None, **kwargs):
+        """Store request so actions_buttons can hide Accept/Reject for admins."""
+        self._request = request
+        return super().get_formset(request, obj, **kwargs)
 
     @display(description=_('პლათფორმა'))
     def platform_link(self, obj):
@@ -95,6 +116,10 @@ class BidInline(TabularInline):
     
     @display(description=_('მოქმედებები'))
     def actions_buttons(self, obj):
+        request = getattr(self, '_request', None)
+        # Admins and superusers cannot accept or reject bids - show status only
+        if request and (request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'):
+            return obj.get_status_display()
         if obj.status == 'pending' and obj.shipment.status == 'active':
             accept_url = reverse('admin:shipment_accept_bid', args=[obj.shipment.pk, obj.pk])
             reject_url = reverse('admin:shipment_reject_bid', args=[obj.shipment.pk, obj.pk])
@@ -131,10 +156,16 @@ class ShipmentAdmin(ModelAdmin):
     """Admin interface for Shipment model."""
     
     form = ShipmentAdminForm
-    list_display = ['id_short', 'user_name', 'route', 'pickup_date', 'cargo_info', 
+    list_display = ['display_id', 'user_name', 'route', 'pickup_date', 'cargo_info', 
                     'transport_type_display', 'currency_display', 'status_badge', 
                     'bids_count_display', 'view_bids_button', 'created_at']
-    list_filter = ['status', 'created_at', 'cargo_type', 'transport_type']
+
+    def get_list_filter(self, request):
+        filters = ['status', 'created_at', 'cargo_type', 'transport_type']
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            filters.insert(1, ShipmentUserFilter)
+        return filters
+
     search_fields = ['pickup_location', 'delivery_location', 'user__email', 
                      'user__first_name', 'user__last_name']
     ordering = ['-created_at']
@@ -211,6 +242,13 @@ class ShipmentAdmin(ModelAdmin):
         return [BidInline]
     
     actions = ['cancel_shipments', 'reject_all_bids_action']
+
+    def get_actions(self, request):
+        """Admins cannot reject bids; hide reject_all_bids_action from them."""
+        actions = super().get_actions(request)
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            actions.pop('reject_all_bids_action', None)
+        return actions
     
     # Disable default clickable links - use the explicit "View Bids" button instead
     list_display_links = None
@@ -329,17 +367,21 @@ class ShipmentAdmin(ModelAdmin):
         return super().change_view(request, object_id, form_url, extra_context)
     
     def accept_bid_view(self, request, shipment_pk, bid_pk):
-        """Accept a specific bid."""
+        """Accept a specific bid. Only the shipment owner (client) can accept; admins cannot."""
         shipment = get_object_or_404(Shipment, pk=shipment_pk)
         bid = get_object_or_404(Bid, pk=bid_pk, shipment=shipment)
         
-        # Check permissions - user must own the shipment
+        # Admins and superusers cannot accept or reject bids
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            messages.error(request, _('ადმინისტრატორებს არ აქვთ ბიდის მიღების ან უარყოფის უფლება.'))
+            return redirect('admin:shipments_shipment_change', shipment_pk)
+        
         if not self.has_view_permission(request, shipment):
             messages.error(request, _('თქვენ არ გაქვთ ამ მოქმედების უფლება'))
             return redirect('admin:shipments_shipment_changelist')
         
-        # Check if user is the owner
-        if shipment.user_id != request.user.pk and not (request.user.is_superuser or request.user.role == 'admin'):
+        # Only the shipment owner can accept
+        if shipment.user_id != request.user.pk:
             messages.error(request, _('თქვენ არ გაქვთ ამ მოქმედების უფლება'))
             return redirect('admin:shipments_shipment_changelist')
         
@@ -352,17 +394,21 @@ class ShipmentAdmin(ModelAdmin):
         return redirect('admin:shipments_shipment_change', shipment_pk)
     
     def reject_bid_view(self, request, shipment_pk, bid_pk):
-        """Reject a specific bid."""
+        """Reject a specific bid. Only the shipment owner (client) can reject; admins cannot."""
         shipment = get_object_or_404(Shipment, pk=shipment_pk)
         bid = get_object_or_404(Bid, pk=bid_pk, shipment=shipment)
         
-        # Check permissions - user must own the shipment
+        # Admins and superusers cannot accept or reject bids
+        if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
+            messages.error(request, _('ადმინისტრატორებს არ აქვთ ბიდის მიღების ან უარყოფის უფლება.'))
+            return redirect('admin:shipments_shipment_change', shipment_pk)
+        
         if not self.has_view_permission(request, shipment):
             messages.error(request, _('თქვენ არ გაქვთ ამ მოქმედების უფლება'))
             return redirect('admin:shipments_shipment_changelist')
         
-        # Check if user is the owner
-        if shipment.user_id != request.user.pk and not (request.user.is_superuser or request.user.role == 'admin'):
+        # Only the shipment owner can reject
+        if shipment.user_id != request.user.pk:
             messages.error(request, _('თქვენ არ გაქვთ ამ მოქმედების უფლება'))
             return redirect('admin:shipments_shipment_changelist')
         

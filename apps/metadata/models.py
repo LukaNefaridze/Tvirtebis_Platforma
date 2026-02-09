@@ -45,13 +45,29 @@ class BaseMetadata(models.Model):
         ordering = ['sort_order', 'name']
 
     def save(self, *args, **kwargs):
+        ModelClass = self.__class__
         if self._state.adding:
-            ModelClass = self.__class__
             if ModelClass.objects.filter(sort_order=self.sort_order).exists():
                 self.sort_order += 1
                 ModelClass.objects.filter(
                     sort_order__gte=self.sort_order
                 ).update(sort_order=F('sort_order') + 1)
+        else:
+            # Updating existing record: shift others when sort_order changes
+            old_row = ModelClass.objects.filter(pk=self.pk).values('sort_order').first()
+            if old_row is not None:
+                old_sort_order = old_row['sort_order']
+                if self.sort_order != old_sort_order:
+                    if self.sort_order < old_sort_order:
+                        ModelClass.objects.filter(
+                            sort_order__gte=self.sort_order,
+                            sort_order__lt=old_sort_order
+                        ).exclude(pk=self.pk).update(sort_order=F('sort_order') + 1)
+                    else:
+                        ModelClass.objects.filter(
+                            sort_order__gt=old_sort_order,
+                            sort_order__lte=self.sort_order
+                        ).exclude(pk=self.pk).update(sort_order=F('sort_order') - 1)
         super().save(*args, **kwargs)
 
     def __str__(self):

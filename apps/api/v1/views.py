@@ -196,7 +196,8 @@ class BidCreateAPIView(APIView):
         "estimated_delivery_time": integer,
         "comment": "string" (optional),
         "contact_person": "string",
-        "contact_phone": "string"
+        "contact_phone": "string",
+        "driver_id": "string"
     }
     """
     
@@ -232,7 +233,7 @@ class BidCreateAPIView(APIView):
             estimated_delivery_time=validated_data['estimated_delivery_time'],
             currency=currency,
             company_name=validated_data['company_name'],
-            external_user_id=validated_data.get('broker_id')
+            external_user_id=validated_data['driver_id']
         )
         
         if not can_submit:
@@ -253,7 +254,7 @@ class BidCreateAPIView(APIView):
             comment=validated_data.get('comment', ''),
             contact_person=validated_data['contact_person'],
             contact_phone=validated_data['contact_phone'],
-            external_user_id=validated_data.get('broker_id'),
+            external_user_id=validated_data['driver_id'],
             status='pending'
         )
         

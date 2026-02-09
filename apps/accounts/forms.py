@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, PasswordChangeForm
 from django.utils.safestring import mark_safe
 from .models import User
+from .utils import GEORGIAN_PHONE_MAX_LENGTH
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
@@ -33,6 +34,8 @@ class CustomUserCreationForm(UserCreationForm):
                 # Add custom class to all fields (they are all password inputs)
                 current_class = self.fields[field_name].widget.attrs.get('class', '')
                 self.fields[field_name].widget.attrs['class'] = f'{current_class} custom-password-input'.strip()
+        if 'mobile' in self.fields:
+            self.fields['mobile'].widget.attrs['maxlength'] = GEORGIAN_PHONE_MAX_LENGTH
 
 class CustomUserChangeForm(UserChangeForm):
     new_password = forms.CharField(
@@ -55,6 +58,8 @@ class CustomUserChangeForm(UserChangeForm):
         # Remove the default password field help text link
         if 'password' in self.fields:
             self.fields['password'].help_text = "დაშიფრული პაროლი (ვერ შეიცვლება პირდაპირ)"
+        if 'mobile' in self.fields:
+            self.fields['mobile'].widget.attrs['maxlength'] = GEORGIAN_PHONE_MAX_LENGTH
 
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):

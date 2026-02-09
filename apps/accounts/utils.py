@@ -54,10 +54,17 @@ def validate_personal_id(personal_id):
     return personal_id
 
 
+# Georgian mobile: 9 digits after country code, first digit of subscriber number must be 5.
+# Valid: +995591325732 (13 chars), 995591325732 (12 digits), 591325732 (9 digits).
+GEORGIAN_PHONE_DIGITS_AFTER_995 = 9
+GEORGIAN_PHONE_MAX_LENGTH = 13  # +995 + 9 digits
+
+
 def validate_mobile_number(mobile):
     """
     Validate Georgian mobile number.
-    Formats: +995 XXX XX XX XX or 5XX XX XX XX
+    Formats: +995 5XX XX XX XX (13 chars), 995 5XX XX XX XX (12 digits), 5XX XX XX XX (9 digits).
+    After 995 the next digit must be 5 (Georgian mobile prefix).
     """
     if not mobile:
         raise ValidationError(_('მობილურის ნომერი სავალდებულოა'))
@@ -65,19 +72,29 @@ def validate_mobile_number(mobile):
     # Remove spaces and dashes
     mobile_clean = mobile.replace(' ', '').replace('-', '')
     
-    # Check for +995 format
+    # +995 + 9 digits (first of the 9 must be 5)
     if mobile_clean.startswith('+995'):
-        if not re.match(r'^\+995\d{9}$', mobile_clean):
-            raise ValidationError(_('არასწორი ფორმატი. გამოიყენეთ: +995 XXX XX XX XX'))
+        if not re.match(r'^\+9955\d{8}$', mobile_clean):
+            raise ValidationError(
+                _('არასწორი ფორმატი. გამოიყენეთ: +995 5XX XX XX XX (სულ 13 სიმბოლო)')
+            )
         return mobile
     
-    # Check for 5XX format
+    # 995 + 9 digits (12 digits total; first of the 9 must be 5)
+    if mobile_clean.startswith('995'):
+        if not re.match(r'^9955\d{8}$', mobile_clean):
+            raise ValidationError(
+                _('არასწორი ფორმატი. გამოიყენეთ: 995 5XX XX XX XX (სულ 12 ციფრი)')
+            )
+        return mobile
+    
+    # 5 + 8 digits (9 digits total)
     if mobile_clean.startswith('5'):
         if not re.match(r'^5\d{8}$', mobile_clean):
             raise ValidationError(_('არასწორი ფორმატი. გამოიყენეთ: 5XX XX XX XX'))
         return mobile
     
-    raise ValidationError(_('მობილური უნდა იწყებოდეს +995-ით ან 5-ით'))
+    raise ValidationError(_('მობილური უნდა იწყებოდეს +995-ით, 995-ით ან 5-ით'))
 
 
 def validate_password_strength(password):

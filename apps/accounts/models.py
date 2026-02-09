@@ -50,7 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         max_length=20,
         null=True,
         blank=True,
-        help_text=_('+995 XXX XX XX XX ან 5XX XX XX XX')
+        help_text=_('+995 5XX XX XX XX, 995 5XX XX XX XX (12 ციფრი) ან 5XX XX XX XX')
     )
     company_name = models.CharField(
         _('კომპანიის დასახელება'),
