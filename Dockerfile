@@ -40,4 +40,4 @@ EXPOSE 6048
 # - 3 workers
 # - timeout 120s
 # - HTTP only
-CMD ["gunicorn", "--bind", "0.0.0.0:6048", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
