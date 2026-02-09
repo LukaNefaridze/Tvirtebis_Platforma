@@ -27,7 +27,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-productio
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1' '*'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -168,7 +168,8 @@ LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
 # Encryption key for sensitive fields
-load_dotenv(dotenv_path=os.environ.get('DOTENV_PATH', '.env'))
+
+load_dotenv(dotenv_path=os.environ.get("DOTENV_PATH", BASE_DIR / ".env"))
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')

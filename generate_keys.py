@@ -1,20 +1,12 @@
-"""
-Quick script to generate secure keys for Django.
-Run: python generate_keys.py
-"""
+# generate_keys.py
 from django.core.management.utils import get_random_secret_key
-import secrets
+from cryptography.fernet import Fernet
 
-print("=" * 60)
-print("GENERATED KEYS FOR .env FILE")
-print("=" * 60)
-print()
-print("SECRET_KEY:")
-print(get_random_secret_key())
-print()
-print("FIELD_ENCRYPTION_KEY:")
-print(secrets.token_urlsafe(32))
-print()
-print("=" * 60)
-print("Copy these values to your .env file")
-print("=" * 60)
+secret_key = get_random_secret_key()
+field_key = Fernet.generate_key().decode()
+
+with open(".env", "w") as f:
+    f.write(f"SECRET_KEY={secret_key}\n")
+    f.write(f"FIELD_ENCRYPTION_KEY={field_key}\n")
+
+print("✅ Generated .env file with SECRET_KEY and FIELD_ENCRYPTION_KEY")
