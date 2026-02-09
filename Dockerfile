@@ -1,39 +1,39 @@
-# Tvirtebis Platform - Django app
+# Base
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# სამუშაო ფოლდერი
 WORKDIR /app
 
-# შექმენი logs ფოლდერი Django log-ებისთვის
 RUN mkdir -p /app/logs
 
-# Install system dependencies for psycopg2
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev \
-    gcc \
+    libpq-dev gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
+# Copy requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install python-dotenv explicitly (settings.py uses it)
+RUN pip install --no-cache-dir python-dotenv cryptography
 
 # Copy project files
 COPY . .
 
-# Generate .env file with SECRET_KEY and FIELD_ENCRYPTION_KEY
+# Generate .env file (FIELD_ENCRYPTION_KEY + SECRET_KEY)
 RUN python generate_keys.py
 
-# Ensure Django reads .env (set path for dotenv if needed)
+# Set path so settings.py can find .env
 ENV DOTENV_PATH=/app/.env
 
-# Collect static files
+# Now collectstatic (after .env exists)
 RUN python manage.py collectstatic --noinput --settings=config.settings
 
-# Django run port
+# Expose port
 EXPOSE 8000
 
-# Gunicorn start command
+# Run command
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]
