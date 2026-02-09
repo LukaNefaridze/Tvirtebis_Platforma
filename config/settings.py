@@ -167,7 +167,7 @@ LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
 # Encryption key for sensitive fields
-FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='')
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
