@@ -1,43 +1,38 @@
+
+
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15
+    container_name: cargo-postgres
     environment:
-      POSTGRES_DB: ${DB_NAME:-tvirtebis_platform}
-      POSTGRES_USER: ${DB_USER:-tvirtebis_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_DB: cargo_db
+      POSTGRES_USER: cargo_user
+      POSTGRES_PASSWORD: secret123
+    networks:
+      - cargo-network
     ports:
-      - "${DB_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tvirtebis_user} -d ${DB_NAME:-tvirtebis_platform}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "5432:5432"
 
   web:
     build: .
+    container_name: cargo-django
     command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput --clear 2>/dev/null || true &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi:application"
-    volumes:
-      - .:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      bash -c "
+      python manage.py migrate --settings=config.settings &&
+      python manage.py runserver 0.0.0.0:8000 --settings=config.settings
+      "
     environment:
       DB_HOST: db
-      DB_PORT: 5432
-      ALLOWED_HOSTS: localhost,127.0.0.1,web,0.0.0.0
+      DB_NAME: cargo_db
+      DB_USER: cargo_user
+      DB_PASSWORD: secret123
+    ports:
+      - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+    networks:
+      - cargo-network
 
-volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
+networks:
+  cargo-network:
+    driver: bridge
