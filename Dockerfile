@@ -35,8 +35,5 @@ RUN python manage.py collectstatic --noinput --settings=config.settings
 # Expose port
 EXPOSE 8000
 
-# Dev-ready Gunicorn CMD:
-# - 3 workers
-# - timeout 120s
-# - HTTP only
-CMD ["gunicorn", "--bind", "0.0.0.0", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
+CMD ["gunicorn", "--log-level", "info", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
+
