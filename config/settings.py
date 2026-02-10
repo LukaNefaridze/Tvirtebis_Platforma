@@ -27,7 +27,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-productio
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', '192.168.80.230','', default=['*'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*','192.168.80.230',''])
 
 # Application definition
 INSTALLED_APPS = [
