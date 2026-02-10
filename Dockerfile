@@ -33,10 +33,9 @@ ENV DOTENV_PATH=/app/.env
 RUN python manage.py collectstatic --noinput --settings=config.settings
 
 # Expose port
-EXPOSE 6048
+EXPOSE 8000
 
 # Dev-ready Gunicorn CMD:
-# - listen on 0.0.0.0:6048
 # - 3 workers
 # - timeout 120s
 # - HTTP only
