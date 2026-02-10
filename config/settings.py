@@ -29,6 +29,10 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*','192.168.80.230',''])
 
+# If you serve Django behind an HTTPS reverse proxy (nginx/traefik), set this:
+# Example: CSRF_TRUSTED_ORIGINS=https://192.168.80.230:6048
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+
 # Application definition
 INSTALLED_APPS = [
     # Django Unfold must be before django.contrib.admin

@@ -16,11 +16,6 @@ services:
   web:
     build: .
     container_name: cargo-django
-    command: >
-      bash -c "
-      python manage.py migrate --settings=config.settings &&
-      python manage.py runserver 0.0.0.0:8000 --settings=config.settings
-      "
     environment:
       DB_HOST: db
       DB_NAME: cargo_db
@@ -28,10 +23,21 @@ services:
       DB_PASSWORD: secret123
       DEBUG: "True"
       ALLOWED_HOSTS: "*"
+      CSRF_TRUSTED_ORIGINS: "https://localhost:6048,http://localhost:8000"
     ports:
       - "8000:8000"
     depends_on:
       - db
+    networks:
+      - cargo-network
+
+  nginx:
+    build: ./nginx
+    container_name: cargo-nginx
+    ports:
+      - "6048:443"
+    depends_on:
+      - web
     networks:
       - cargo-network
 

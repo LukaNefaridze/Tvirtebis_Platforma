@@ -5,6 +5,7 @@ variables:
   DOCKER_DRIVER: overlay2
   SERVICE_NAME: 'cargo-menegment-system'
   CI_REGISTRY_IMAGE: 'dockerhub.softgen.ge/babiline/cargo-menegment-system'
+  PROXY_IMAGE: 'dockerhub.softgen.ge/babiline/cargo-menegment-system-proxy'
 
 stages:
   - build
@@ -21,6 +22,8 @@ Build Development:
   script:
     - docker build -t ${CI_REGISTRY_IMAGE}:main ./
     - docker push ${CI_REGISTRY_IMAGE}:main
+    - docker build -t ${PROXY_IMAGE}:main ./nginx
+    - docker push ${PROXY_IMAGE}:main
   only:
     - main
 
@@ -29,12 +32,13 @@ Deploy Development:
   before_script:
     - echo ${DOCKER_REGISTRY_PASSWORD_U} | docker -H tcp://192.168.80.230:2375 login -u gitlab-runner --password-stdin ${CI_REGISTRY}
   script:
-    - exists=`docker -H tcp://192.168.80.230:2375 service ls -f name=${SERVICE_NAME} -q | wc -l`
     - |
-      if [ $exists -eq 0 ]
+      app_exists=`docker -H tcp://192.168.80.230:2375 service ls -f name=${SERVICE_NAME} -q | wc -l`
+      if [ $app_exists -eq 0 ]
       then
         docker -H tcp://192.168.80.230:2375 service create  \
           --with-registry-auth                      \
+          --replicas                  1             \
           --restart-delay             10s           \
           --restart-max-attempts      5             \
           --restart-window            20s           \
@@ -46,20 +50,39 @@ Deploy Development:
           --update-order              start-first   \
           --network service_network                 \
           --name ${SERVICE_NAME} \
-          nginx
+          ${CI_REGISTRY_IMAGE}:main
+      fi
+    - |
+      proxy_exists=`docker -H tcp://192.168.80.230:2375 service ls -f name=${SERVICE_NAME}-proxy -q | wc -l`
+      if [ $proxy_exists -eq 0 ]
+      then
+        docker -H tcp://192.168.80.230:2375 service create \
+          --with-registry-auth \
+          --replicas 1 \
+          --network service_network \
+          --publish published=6048,target=443 \
+          --name ${SERVICE_NAME}-proxy \
+          ${PROXY_IMAGE}:main
       fi
     - |
       docker -H tcp://192.168.80.230:2375 service update \
         --force \
         --with-registry-auth \
-        --env-add DJANGO_DEBUG=true \
+        --env-add DEBUG=false \
         --env-add DB_NAME=${DEV_DB_NAME} \
         --env-add DB_USER=${DEV_DB_USER} \
         --env-add DB_PASSWORD=${DEV_DB_PASSWORD} \
         --env-add DB_HOST=${DEV_DB_HOST} \
         --env-add DB_PORT=${DEV_DB_PORT} \
         --env-add ALLOWED_HOSTS=* \
+        --env-add CSRF_TRUSTED_ORIGINS=https://192.168.80.230:6048 \
         --image ${CI_REGISTRY_IMAGE}:main \
         ${SERVICE_NAME}
+    - |
+      docker -H tcp://192.168.80.230:2375 service update \
+        --force \
+        --with-registry-auth \
+        --image ${PROXY_IMAGE}:main \
+        ${SERVICE_NAME}-proxy
   only:
     - main
