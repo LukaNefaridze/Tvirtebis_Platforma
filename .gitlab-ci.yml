@@ -45,7 +45,6 @@ Deploy Development:
           --update-failure-action     rollback      \
           --update-order              start-first   \
           --network service_network                 \
-          --publish published=6048,target=8000      \
           --name ${SERVICE_NAME} \
           nginx
       fi
