@@ -26,6 +26,8 @@ services:
       DB_NAME: cargo_db
       DB_USER: cargo_user
       DB_PASSWORD: secret123
+      DEBUG: "True"
+      ALLOWED_HOSTS: "*"
     ports:
       - "8000:8000"
     depends_on:

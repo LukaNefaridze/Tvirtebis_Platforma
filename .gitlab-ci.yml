@@ -58,6 +58,7 @@ Deploy Development:
         --env-add DB_PASSWORD=${DEV_DB_PASSWORD} \
         --env-add DB_HOST=${DEV_DB_HOST} \
         --env-add DB_PORT=${DEV_DB_PORT} \
+        --env-add ALLOWED_HOSTS=* \
         --image ${CI_REGISTRY_IMAGE}:main \
         ${SERVICE_NAME}
   only:
