@@ -37,7 +37,7 @@ echo "Running migrations..."
 python manage.py migrate --noinput --settings=config.settings
 
 echo "Collecting static..."
-python manage.py collectstatic --noinput --settings=config.settings
+python manage.py collectstatic --noinput --clear --settings=config.settings
 
 exec "$@"
 

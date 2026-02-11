@@ -28,12 +28,9 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
 from apps.accounts.views import CustomPasswordChangeView
 
-# Minimal home page view
-def home(request):
-    return HttpResponse("Cargo Management System is running!")
+from django.views.generic import RedirectView
 
 urlpatterns = [
     # Override admin password change view
@@ -42,8 +39,8 @@ urlpatterns = [
     path('accounts/', include('apps.accounts.urls')),
     path('api/v1/', include('apps.api.v1.urls')),
 
-    # Minimal home page
-    path('', home),
+    # Redirect root to admin login
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
 ]
 
 if settings.DEBUG:

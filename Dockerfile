@@ -29,9 +29,6 @@ RUN python generate_keys.py
 # Expose .env path
 ENV DOTENV_PATH=/app/.env
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --settings=config.settings
-
 # Expose port
 EXPOSE 8000
 
