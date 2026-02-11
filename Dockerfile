@@ -35,6 +35,11 @@ RUN python manage.py collectstatic --noinput --settings=config.settings
 # Expose port
 EXPOSE 8000
 
+# Use entrypoint to wait for DB and run migrations before main command
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Dev-ready Gunicorn CMD:
 
 # - 3 workers

@@ -11,16 +11,17 @@ services:
     networks:
       - cargo-network
     ports:
-      - "5432:5432"
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_user -d cargo_db"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
 
   web:
     build: .
     container_name: cargo-django
-    command: >
-      bash -c "
-      python manage.py migrate --settings=config.settings &&
-      python manage.py runserver 0.0.0.0:8000 --settings=config.settings
-      "
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000", "--settings=config.settings"]
     environment:
       DB_HOST: db
       DB_NAME: cargo_db
@@ -29,7 +30,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - cargo-network
 

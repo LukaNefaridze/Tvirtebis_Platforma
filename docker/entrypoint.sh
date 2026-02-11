@@ -8,9 +8,9 @@ wait_for_port() {
 
   python - <<PY
 import os, socket, time, sys
-host = ${host!r}
-port = int(${port!r})
-timeout = int(${timeout!r})
+host = "${host}"
+port = int("${port}")
+timeout = int("${timeout}")
 start = time.time()
 while True:
     try:

@@ -164,5 +164,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.pk and self.last_login:
             self.last_login_at = self.last_login
             
-        self.clean()
+        # Check if we are only updating last_login (standard Django login behavior)
+        # In this case, we skip validation to prevent locking out users with existing invalid data
+        update_fields = kwargs.get('update_fields')
+        if not (update_fields and 'last_login' in update_fields):
+            self.clean()
+            
         super().save(*args, **kwargs)
