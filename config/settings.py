@@ -27,11 +27,11 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-productio
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*','192.168.80.230'])
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'http://192.168.80.230:6048',
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.80.230:6048"
+]
 
 # Application definition
 INSTALLED_APPS = [
