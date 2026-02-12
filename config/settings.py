@@ -29,6 +29,10 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://192.168.80.230:6048',
+]
+
 # Application definition
 INSTALLED_APPS = [
     # Django Unfold must be before django.contrib.admin
@@ -380,8 +384,8 @@ LOGGING = {
 # Security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
