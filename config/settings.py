@@ -29,9 +29,9 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.80.230:6048',
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://192.168.80.230:6048',
+# ]
 
 # Application definition
 INSTALLED_APPS = [
