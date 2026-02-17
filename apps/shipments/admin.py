@@ -1,5 +1,8 @@
+import logging
 from django.contrib import admin
 from django import forms
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django_flatpickr.widgets import DateTimePickerInput
 from django_flatpickr.schemas import FlatpickrOptions
 from django.utils.html import format_html
@@ -10,8 +13,11 @@ from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display, action
+from apps.admin_mixins import SafeAdminMixin
 from .models import Shipment
 from apps.bids.models import Bid
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -37,11 +43,11 @@ class BidInline(TabularInline):
     
     model = Bid
     extra = 0
-    can_delete = False
+    can_delete = True
     
-    fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
+    fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_minutes',
               'contact_info', 'status_badge', 'created_at', 'actions_buttons']
-    readonly_fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_time', 
+    readonly_fields = ['display_id', 'platform_link', 'company_name', 'price_display', 'estimated_delivery_minutes',
                        'contact_info', 'status_badge', 'created_at', 'actions_buttons']
     
     verbose_name = _('შეთავაზება')
@@ -61,7 +67,7 @@ class BidInline(TabularInline):
     
     def has_delete_permission(self, request, obj=None):
         """Bids cannot be deleted directly in admin."""
-        return False
+        return request.user.is_superuser
     
     def get_queryset(self, request):
         """Filter bids to exclude soft-deleted ones."""
@@ -152,7 +158,7 @@ class ShipmentAdminForm(forms.ModelForm):
 
 
 @admin.register(Shipment)
-class ShipmentAdmin(ModelAdmin):
+class ShipmentAdmin(SafeAdminMixin, ModelAdmin):
     """Admin interface for Shipment model."""
     
     form = ShipmentAdminForm
@@ -241,13 +247,14 @@ class ShipmentAdmin(ModelAdmin):
             return []  # No inlines for add view
         return [BidInline]
     
-    actions = ['cancel_shipments', 'reject_all_bids_action']
+    actions = ['cancel_shipments', 'reject_all_bids_action', 'soft_delete_shipments']
 
     def get_actions(self, request):
-        """Admins cannot reject bids; hide reject_all_bids_action from them."""
+        """Control action visibility based on user role."""
         actions = super().get_actions(request)
         if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
             actions.pop('reject_all_bids_action', None)
+            actions.pop('soft_delete_shipments', None)
         return actions
     
     # Disable default clickable links - use the explicit "View Bids" button instead
@@ -424,26 +431,64 @@ class ShipmentAdmin(ModelAdmin):
     def cancel_shipments(self, request, queryset):
         """Cancel selected shipments."""
         count = 0
+        errors = []
         for shipment in queryset.filter(status='active'):
             try:
                 shipment.mark_cancelled()
                 count += 1
-            except ValueError:
-                pass
-        
-        self.message_user(request, _(f'{count} განაცხადი გაუქმდა'), messages.SUCCESS)
+            except (ValidationError, IntegrityError, ValueError, Exception) as e:
+                error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+                errors.append(f'{shipment}: {error_msg}')
+                logger.exception("Error cancelling shipment %s: %s", shipment.pk, error_msg)
+
+        if count:
+            self.message_user(request, _(f'{count} განაცხადი გაუქმდა'), messages.SUCCESS)
+        for err in errors:
+            self.message_user(request, err, messages.ERROR)
     
     @action(description=_('ყველა ბიდის უარყოფა'))
     def reject_all_bids_action(self, request, queryset):
         """Reject all pending bids for selected shipments."""
         count = 0
+        errors = []
         for shipment in queryset.filter(status='active'):
-            pending_count = shipment.pending_bids_count
-            if pending_count > 0:
-                shipment.reject_all_pending_bids()
-                count += pending_count
-        
-        self.message_user(request, _(f'{count} ბიდი უარყოფილია'), messages.SUCCESS)
+            try:
+                pending_count = shipment.pending_bids_count
+                if pending_count > 0:
+                    shipment.reject_all_pending_bids()
+                    count += pending_count
+            except (ValidationError, IntegrityError, Exception) as e:
+                error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+                errors.append(f'{shipment}: {error_msg}')
+                logger.exception("Error rejecting bids for shipment %s: %s", shipment.pk, error_msg)
+
+        if count:
+            self.message_user(request, _(f'{count} ბიდი უარყოფილია'), messages.SUCCESS)
+        for err in errors:
+            self.message_user(request, err, messages.ERROR)
+
+    @action(description=_('განცხადების წაშლა'))
+    def soft_delete_shipments(self, request, queryset):
+        """Soft delete selected shipments (hides without removing from database)."""
+        count = 0
+        errors = []
+        for shipment in queryset.filter(is_deleted=False):
+            if not request.user.is_superuser and request.user.role == 'client':
+                if shipment.user_id != request.user.pk:
+                    errors.append(f'{shipment}: თქვენ არ გაქვთ ამ განაცხადის წაშლის უფლება')
+                    continue
+            try:
+                shipment.soft_delete(user=request.user)
+                count += 1
+            except (ValidationError, IntegrityError, ValueError, Exception) as e:
+                error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+                errors.append(f'{shipment}: {error_msg}')
+                logger.exception("Error soft-deleting shipment %s: %s", shipment.pk, error_msg)
+
+        if count:
+            self.message_user(request, _(f'{count} განაცხადი წაშლილია'), messages.SUCCESS)
+        for err in errors:
+            self.message_user(request, err, messages.ERROR)
     
     def get_queryset(self, request):
         """
@@ -469,9 +514,9 @@ class ShipmentAdmin(ModelAdmin):
         # Exclude shipments from soft-deleted users
         qs = qs.filter(user__is_deleted=False)
         
-        # If the logged-in user is not a superuser/admin, show only their shipments
+        # Clients: hide soft-deleted shipments and show only their own
         if not request.user.is_superuser and request.user.role == 'client':
-             return qs.filter(user=request.user)
+             return qs.filter(user=request.user, is_deleted=False)
         
         return qs
     
@@ -522,9 +567,14 @@ class ShipmentAdmin(ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         """Set user automatically for new shipments."""
-        if not change and not obj.user_id:
-            obj.user = request.user
-        super().save_model(request, obj, form, change)
+        try:
+            if not change and not obj.user_id:
+                obj.user = request.user
+            super().save_model(request, obj, form, change)
+        except (ValidationError, IntegrityError) as e:
+            error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+            self.message_user(request, error_msg, messages.ERROR)
+            logger.exception("Error saving shipment: %s", error_msg)
     
     def get_readonly_fields(self, request, obj=None):
         """

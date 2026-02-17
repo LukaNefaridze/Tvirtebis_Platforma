@@ -163,11 +163,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         if self.pk and self.last_login:
             self.last_login_at = self.last_login
-            
-        # Check if we are only updating last_login (standard Django login behavior)
-        # In this case, we skip validation to prevent locking out users with existing invalid data
+
         update_fields = kwargs.get('update_fields')
-        if not (update_fields and 'last_login' in update_fields):
+
+        # Only run validation when doing a full save or when explicitly
+        # updating one of the validated fields.  This prevents locking out
+        # users whose existing data predates a validation rule change (e.g.
+        # personal_id format) when we only need to update the password.
+        validated_fields = {'personal_id', 'mobile'}
+        if update_fields is not None:
+            if validated_fields & set(update_fields):
+                self.clean()
+        else:
             self.clean()
-            
+
         super().save(*args, **kwargs)

@@ -110,9 +110,17 @@ class BidCreateSerializer(serializers.Serializer):
         max_length=3,
         help_text='Currency code (must match shipment preferred currency)'
     )
-    estimated_delivery_time = serializers.IntegerField(
-        min_value=1,
-        help_text='Estimated delivery time in hours'
+    estimated_delivery_hours = serializers.IntegerField(
+        min_value=0,
+        default=0,
+        help_text='Estimated delivery time, hours'
+    )
+
+    estimated_delivery_minutes = serializers.IntegerField(
+        min_value=0,
+        max_value=59,
+        default=0,
+        help_text='Estimated delivery time, minutes'
     )
     comment = serializers.CharField(
         max_length=500,
@@ -163,7 +171,19 @@ class BidCreateSerializer(serializers.Serializer):
         
         # Store currency object for later use
         data['currency_obj'] = currency
-        
+
+        #convert hours + minutes to total minutes
+        hours = data.get('estimated_delivery_hours', 0)
+        minutes = data.get('estimated_delivery_minutes', 0)
+        total_minutes = (hours * 60) + minutes
+
+        if total_minutes < 1:
+            raise serializers.ValidationError(
+                'Total delivery time should be at least 1 minute'
+            )
+
+        data['estimated_delivery_minutes'] = total_minutes
+
         return data
 
 
@@ -181,7 +201,9 @@ class BidResponseSerializer(serializers.ModelSerializer):
             'company_name',
             'price',
             'currency',
-            'estimated_delivery_time',
+            'estimated_delivery_minutes',
+            'delivery_time_hours',
+            'delivery_time_minutes',
             'comment',
             'contact_person',
             'contact_phone',
@@ -189,3 +211,9 @@ class BidResponseSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['id', 'shipment_id', 'status', 'created_at']
+
+    def get_delivery_time_hours(self, obj):
+            return obj.estimated_delivery_minutes // 60
+
+    def get_delivery_time_minutes(self, obj):
+            return obj.estimated_delivery_minutes % 60

@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: cargo_db
       POSTGRES_USER: cargo_user
       POSTGRES_PASSWORD: secret123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - cargo-network
     ports:
@@ -38,3 +40,6 @@ services:
 networks:
   cargo-network:
     driver: bridge
+
+volumes:
+  postgres_data:

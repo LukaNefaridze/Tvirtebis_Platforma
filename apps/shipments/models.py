@@ -153,12 +153,12 @@ class Shipment(models.Model):
     @property
     def bids_count(self):
         """Return count of bids for this shipment."""
-        return self.bids.count()
+        return self.bids.filter(is_deleted=False).count()
     
     @property
     def pending_bids_count(self):
         """Return count of pending bids."""
-        return self.bids.filter(status='pending').count()
+        return self.bids.filter(status='pending', is_deleted=False).count()
     
     @property
     def is_active_status(self):
@@ -241,3 +241,21 @@ class Shipment(models.Model):
         pending_bids = self.bids.filter(status='pending')
         for pending_bid in pending_bids:
             pending_bid.reject()
+
+    @transaction.atomic
+    def soft_delete(self, user=None):
+        """
+        Soft delete the shipment - hides it without removing from database.
+        If active, cancels first (which rejects all pending bids).
+        """
+        if self.is_deleted:
+            raise ValueError(_('განაცხადი უკვე წაშლილია'))
+
+        if self.status == 'active':
+            self.mark_cancelled()
+            self.refresh_from_db()
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])

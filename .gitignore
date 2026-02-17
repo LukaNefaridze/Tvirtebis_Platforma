@@ -12,3 +12,4 @@ logs/
 *.sqlite3
 media/
 staticfiles/
+compose.yml

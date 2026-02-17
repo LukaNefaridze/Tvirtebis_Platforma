@@ -1,5 +1,8 @@
+import logging
 from django.contrib import admin
 from django.contrib.admin import helpers
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
@@ -7,8 +10,11 @@ from django.urls import reverse
 from django.utils import timezone
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display, action
+from apps.admin_mixins import SafeAdminMixin
 from .models import Platform, PlatformAPIKey, Bid, RejectedBidCache
 from apps.accounts.models import User
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -47,7 +53,7 @@ class PlatformAPIKeyInline(TabularInline):
 
 
 @admin.register(Platform)
-class PlatformAdmin(ModelAdmin):
+class PlatformAdmin(SafeAdminMixin, ModelAdmin):
     """Admin interface for Platform model."""
     
     list_display = ['company_name', 'contact_person', 'contact_email', 'contact_phone', 
@@ -82,9 +88,9 @@ class PlatformAdmin(ModelAdmin):
     actions = ['activate_platforms', 'deactivate_platforms', 'generate_api_key', 'soft_delete_platforms']
     
     def get_actions(self, request):
-        """Remove the default delete action - only soft delete is allowed."""
+        """Remove the default delete action - only soft delete is allowed(except for superuser)."""
         actions = super().get_actions(request)
-        if 'delete_selected' in actions:
+        if not request.user.is_superuser and 'delete_selected' in actions:
             del actions['delete_selected']
         return actions
     
@@ -100,28 +106,35 @@ class PlatformAdmin(ModelAdmin):
     def _perform_soft_delete(self, request, queryset):
         deleted_count = 0
         bids_rejected_count = 0
-        
+        errors = []
+
         for platform in queryset:
-            # Reject all pending bids from this platform
-            pending_bids = Bid.objects.filter(platform=platform, status='pending')
-            for bid in pending_bids:
-                bid.reject()
-                bids_rejected_count += 1
-            
-            # Soft delete the platform
-            platform.is_deleted = True
-            platform.deleted_at = timezone.now()
-            platform.deleted_by = request.user
-            platform.is_active = False  # Also deactivate
-            platform.save()
-            
-            deleted_count += 1
-            
-        self.message_user(
-            request,
-            _(f'{deleted_count} პლათფორმა წაიშალა და {bids_rejected_count} მიმდინარე ბიდი გაუქმდა'),
-            messages.SUCCESS
-        )
+            try:
+                pending_bids = Bid.objects.filter(platform=platform, status='pending')
+                for bid in pending_bids:
+                    bid.reject()
+                    bids_rejected_count += 1
+
+                platform.is_deleted = True
+                platform.deleted_at = timezone.now()
+                platform.deleted_by = request.user
+                platform.is_active = False
+                platform.save()
+
+                deleted_count += 1
+            except (ValidationError, IntegrityError, Exception) as e:
+                error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+                errors.append(f'{platform.company_name}: {error_msg}')
+                logger.exception("Error deleting platform %s: %s", platform.company_name, error_msg)
+
+        if deleted_count:
+            self.message_user(
+                request,
+                _(f'{deleted_count} პლათფორმა წაიშალა და {bids_rejected_count} მიმდინარე ბიდი გაუქმდა'),
+                messages.SUCCESS
+            )
+        for err in errors:
+            self.message_user(request, err, messages.ERROR)
 
     @action(description=_('პლათფორმების წაშლა'))
     def soft_delete_platforms(self, request, queryset):
@@ -204,42 +217,51 @@ class PlatformAdmin(ModelAdmin):
     def generate_api_key(self, request, queryset):
         """Generate new API keys for selected brokers."""
         api_keys_info = []
-        
+        errors = []
+
         for platform in queryset:
-            # Generate new API key
-            raw_key = PlatformAPIKey.generate_key()
-            api_key = PlatformAPIKey(platform=platform)
-            api_key.set_key(raw_key)
-            api_key.save()
-            
-            api_keys_info.append((platform.company_name, raw_key))
-        
-        # Display all keys to admin (one-time only)
-        message_parts = ['<strong>API გასაღებები წარმატებით შეიქმნა:</strong><br><br>']
-        for company, key in api_keys_info:
-            message_parts.append(f'<strong>{company}</strong>:<br><code>{key}</code><br><br>')
-        message_parts.append('<em>გთხოვთ გადაუგზავნოთ ეს გასაღებები პლათფორმებს. ისინი აღარ გამოჩნდება ხელახლა!</em>')
-        
-        self.message_user(request, format_html(''.join(message_parts)), messages.SUCCESS)
+            try:
+                raw_key = PlatformAPIKey.generate_key()
+                api_key = PlatformAPIKey(platform=platform)
+                api_key.set_key(raw_key)
+                api_key.save()
+                api_keys_info.append((platform.company_name, raw_key))
+            except (ValidationError, IntegrityError, Exception) as e:
+                error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+                errors.append(f'{platform.company_name}: {error_msg}')
+                logger.exception("Error generating API key for %s: %s", platform.company_name, error_msg)
+
+        if api_keys_info:
+            message_parts = ['<strong>API გასაღებები წარმატებით შეიქმნა:</strong><br><br>']
+            for company, key in api_keys_info:
+                message_parts.append(f'<strong>{company}</strong>:<br><code>{key}</code><br><br>')
+            message_parts.append('<em>გთხოვთ გადაუგზავნოთ ეს გასაღებები პლათფორმებს. ისინი აღარ გამოჩნდება ხელახლა!</em>')
+            self.message_user(request, format_html(''.join(message_parts)), messages.SUCCESS)
+
+        for err in errors:
+            self.message_user(request, err, messages.ERROR)
     
     def save_model(self, request, obj, form, change):
         """Handle broker save."""
-        super().save_model(request, obj, form, change)
-        
-        # If this is a new broker, show a message about generating API key
-        if not change:
-            messages.info(
-                request,
-                _('პლათფორმა შეიქმნა. გამოიყენეთ "API გასაღების გენერაცია" ქმედება API გასაღების შესაქმნელად.')
-            )
+        try:
+            super().save_model(request, obj, form, change)
+            if not change:
+                messages.info(
+                    request,
+                    _('პლათფორმა შეიქმნა. გამოიყენეთ "API გასაღების გენერაცია" ქმედება API გასაღების შესაქმნელად.')
+                )
+        except (ValidationError, IntegrityError) as e:
+            error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+            self.message_user(request, error_msg, messages.ERROR)
+            logger.exception("Error saving platform: %s", error_msg)
 
 
 @admin.register(Bid)
-class BidAdmin(ModelAdmin):
+class BidAdmin(SafeAdminMixin, ModelAdmin):
     """Admin interface for Bid model."""
     
     list_display = ['display_id', 'shipment_info', 'platform_link', 'company_name', 
-                    'price_display', 'estimated_delivery_time', 'status_badge', 'view_details_button', 'created_at']
+                    'price_display', 'delivery_time_display', 'status_badge', 'view_details_button', 'created_at']
     def get_list_filter(self, request):
         """
         Return list_filter based on user role.
@@ -260,7 +282,7 @@ class BidAdmin(ModelAdmin):
     def get_actions(self, request):
         """Remove the default delete action; admins cannot soft-delete (reject) bids."""
         actions = super().get_actions(request)
-        if 'delete_selected' in actions:
+        if not request.user.is_superuser and 'delete_selected' in actions:
             del actions['delete_selected']
         # Admins and superusers cannot accept or reject bids - hide soft_delete_bids
         if request.user.is_superuser or getattr(request.user, 'role', '') == 'admin':
@@ -270,25 +292,30 @@ class BidAdmin(ModelAdmin):
     @action(description=_('ბიდების წაშლა'))
     def soft_delete_bids(self, request, queryset):
         """Soft delete selected bids."""
-        count = queryset.count()
-        queryset.update(
-            is_deleted=True,
-            deleted_at=timezone.now(),
-            deleted_by=request.user,
-            status='rejected'
-        )
-        self.message_user(
-            request,
-            _(f'{count} ბიდი წაიშალა'),
-            messages.SUCCESS
-        )
+        try:
+            count = queryset.count()
+            queryset.update(
+                is_deleted=True,
+                deleted_at=timezone.now(),
+                deleted_by=request.user,
+                status='rejected'
+            )
+            self.message_user(
+                request,
+                _(f'{count} ბიდი წაიშალა'),
+                messages.SUCCESS
+            )
+        except (ValidationError, IntegrityError, Exception) as e:
+            error_msg = '; '.join(e.messages) if hasattr(e, 'messages') else str(e)
+            self.message_user(request, error_msg, messages.ERROR)
+            logger.exception("Error in soft_delete_bids: %s", error_msg)
     
     fieldsets = (
         (_('ძირითადი ინფორმაცია'), {
             'fields': ('display_id', 'id', 'shipment', 'platform', 'company_name', 'status')
         }),
         (_('შეთავაზების დეტალები'), {
-            'fields': ('price', 'currency', 'estimated_delivery_time', 'comment')
+            'fields': ('price', 'currency', 'delivery_time_display', 'comment')
         }),
         (_('საკონტაქტო ინფორმაცია'), {
             'fields': ('contact_person', 'contact_phone')
@@ -300,7 +327,7 @@ class BidAdmin(ModelAdmin):
     )
     
     readonly_fields = ['display_id', 'id', 'shipment', 'platform', 'company_name', 'price', 'currency', 
-                       'estimated_delivery_time', 'comment', 'contact_person', 
+                       'delivery_time_display', 'comment', 'contact_person',
                        'contact_phone', 'status', 'created_at', 'updated_at']
     
     # Disable clickable links - use the explicit "Details" button instead
@@ -319,6 +346,18 @@ class BidAdmin(ModelAdmin):
     @display(description=_('ფასი'))
     def price_display(self, obj):
         return f"{obj.price} {obj.currency.symbol}"
+    
+    @display(description=_('მიწოდების დრო'))
+    def delivery_time_display(self, obj):
+        total_minutes = obj.estimated_delivery_minutes
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        if hours and minutes:
+            return f"{hours} საათი {minutes} წუთი"
+        elif hours:
+            return f"{hours} საათი"
+        else:
+            return f"{minutes} წუთი"
     
     @display(description=_('სტატუსი'))
     def status_badge(self, obj):
@@ -373,7 +412,7 @@ class BidAdmin(ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         """Disable the delete button on individual bid pages."""
-        return False
+        return request.user.is_superuser
     
     def has_change_permission(self, request, obj=None):
         """Bids cannot be edited (read-only)."""
@@ -417,17 +456,17 @@ class BidAdmin(ModelAdmin):
 
 
 @admin.register(RejectedBidCache)
-class RejectedBidCacheAdmin(ModelAdmin):
+class RejectedBidCacheAdmin(SafeAdminMixin, ModelAdmin):
     """Admin interface for RejectedBidCache model (read-only)."""
     
     list_display = ['id_short', 'shipment_link', 'platform_link', 'price', 
-                    'estimated_delivery_time', 'currency', 'rejected_at']
+                    'delivery_time_display', 'currency', 'rejected_at']
     list_filter = ['rejected_at', 'currency']
     search_fields = ['platform__company_name', 'shipment__pickup_location']
     ordering = ['-rejected_at']
     
-    fields = ['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
-    readonly_fields = ['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'rejected_at']
+    fields = ['shipment', 'platform', 'price', 'estimated_delivery_minutes', 'currency', 'rejected_at']
+    readonly_fields = ['shipment', 'platform', 'price', 'estimated_delivery_minutes', 'currency', 'rejected_at']
     
     @display(description=_('ID'))
     def id_short(self, obj):
@@ -442,6 +481,18 @@ class RejectedBidCacheAdmin(ModelAdmin):
     def platform_link(self, obj):
         url = reverse('admin:bids_platform_change', args=[obj.platform.pk])
         return format_html('<a href="{}">{}</a>', url, obj.platform.company_name)
+    
+    @display(description=_('მიწოდების დრო'))
+    def delivery_time_display(self, obj):
+        total_minutes = obj.estimated_delivery_minutes
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        if hours and minutes:
+            return f"{hours} საათი {minutes} წუთი"
+        elif hours:
+            return f"{hours} საათი"
+        else:
+            return f"{minutes} წუთი"
     
     def has_add_permission(self, request):
         """Cache entries are created automatically."""

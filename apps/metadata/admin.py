@@ -1,10 +1,11 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
+from apps.admin_mixins import SafeAdminMixin
 from .models import CargoType, TransportType, VolumeUnit, Currency
 
 
-class BaseMetadataAdmin(ModelAdmin):
+class BaseMetadataAdmin(SafeAdminMixin, ModelAdmin):
     """Base admin class for metadata models."""
     
     list_display = ['name', 'sort_order']
@@ -12,6 +13,22 @@ class BaseMetadataAdmin(ModelAdmin):
     search_fields = ['name']
     list_editable = ['sort_order']
     ordering = ['sort_order', 'name']
+
+    def _is_admin_or_superuser(self, request):
+        return request.user.is_superuser or getattr(request.user, 'role', '') == 'admin'
+
+    def has_module_permission(self, request):
+        """Hide metadata app from admin index for client users."""
+        return self._is_admin_or_superuser(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._is_admin_or_superuser(request)
+
+    def has_add_permission(self, request):
+        return self._is_admin_or_superuser(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._is_admin_or_superuser(request)
     
     fieldsets = (
         (None, {
@@ -30,7 +47,13 @@ class BaseMetadataAdmin(ModelAdmin):
         return obj.is_active
     
     def has_delete_permission(self, request, obj=None):
-        """Prevent deletion if used in active shipments."""
+        """Prevent deletion for clients and if used in active shipments (Superusers can always delete)."""
+        if not self._is_admin_or_superuser(request):
+            return False
+
+        if request.user.is_superuser:
+            return True
+
         if obj is None:
             return True
         

@@ -1,24 +1,51 @@
-
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from apps.shipments.models import Shipment
 from apps.bids.models import Bid
 from apps.metadata.models import CargoType, TransportType, VolumeUnit, Currency
+from apps.bids.models import Platform, PlatformAPIKey, RejectedBidCache
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 class Command(BaseCommand):
     help = 'Sets up the Client group with default permissions'
 
     def handle(self, *args, **options):
+        #================
+        #  Admin Group
+        #================
+        admin_group, created = Group.objects.get_or_create(name='Admin')
+
+        # Admins get ALL permissions on all app models
+        admin_models = [
+            User, Shipment, Bid, Platform, PlatformAPIKey, RejectedBidCache,
+            CargoType, TransportType, VolumeUnit, Currency,
+        ]
+        for model in admin_models:
+            ct = ContentType.objects.get_for_model(model)
+            perms = Permission.objects.filter(content_type=ct)
+            admin_group.permissions.add(*perms)
+            self.stdout.write(f'Added all permissions for {model.__name__} to Admin group')
+
+        self.stdout.write(self.style.SUCCESS('Admin group configured successfully'))
+
+        # Assign all role='admin' users to the Admin group
+        admin_users = User.objects.filter(role='admin', is_deleted=False)
+        for user in admin_users:
+            user.groups.add(admin_group)
+            self.stdout.write(f'Added {user.email} to Admin group')
+
+
         client_group, created = Group.objects.get_or_create(name='Client')
 
-        # 1. Define models user can EDIT (Metadata)
+        # 1. Ensure clients have NO metadata permissions
         metadata_models = [CargoType, TransportType, VolumeUnit, Currency]
         for model in metadata_models:
             ct = ContentType.objects.get_for_model(model)
-            permissions = Permission.objects.filter(content_type=ct, codename__startswith='change_')
-            client_group.permissions.add(*permissions)
-            self.stdout.write(f'Added change permissions for {model.__name__}')
+            metadata_perms = Permission.objects.filter(content_type=ct)
+            client_group.permissions.remove(*metadata_perms)
+            self.stdout.write(f'Removed all metadata permissions for {model.__name__} from Client group')
 
         # 2. Define Shipment Permissions (Add, View, Change)
         # Note: We give 'change' permission so they can access the edit page to perform actions (Accept/Reject),

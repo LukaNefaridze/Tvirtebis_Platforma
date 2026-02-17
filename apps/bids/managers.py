@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 class BidManager(models.Manager):
     """Custom manager for Bid model with business logic."""
     
-    def can_submit_bid(self, shipment, platform, price, estimated_delivery_time, currency, company_name, external_user_id=None):
+    def can_submit_bid(self, shipment, platform, price, estimated_delivery_minutes, currency, company_name, external_user_id=None):
         """
         Check if a bid can be submitted.
         Returns (can_submit: bool, error_code: str, error_message: str)
@@ -24,7 +24,7 @@ class BidManager(models.Manager):
             shipment=shipment,
             platform=platform,
             price=price,
-            estimated_delivery_time=estimated_delivery_time,
+            estimated_delivery_minutes=estimated_delivery_minutes,
             currency=currency,
             external_user_id=external_user_id
         ).exists()
@@ -37,7 +37,7 @@ class BidManager(models.Manager):
             shipment=shipment,
             platform=platform,
             price=price,
-            estimated_delivery_time=estimated_delivery_time,
+            estimated_delivery_minutes=estimated_delivery_minutes,
             currency=currency,
             company_name=company_name,
             external_user_id=external_user_id
@@ -53,7 +53,7 @@ class BidManager(models.Manager):
         ).order_by('-created_at').first()
 
         if last_bid and last_bid.price == price:
-            if estimated_delivery_time >= last_bid.estimated_delivery_time:
+            if estimated_delivery_minutes >= last_bid.estimated_delivery_minutes:
                 return False, 'BID_PRICE_DUPLICATE', _('იგივე ფასის შემთხვევაში მიწოდების დრო უნდა იყოს ნაკლები')
         
         return True, None, None

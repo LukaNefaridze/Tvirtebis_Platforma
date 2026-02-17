@@ -207,8 +207,9 @@ class Bid(models.Model):
         related_name='bids',
         verbose_name=_('ვალუტა')
     )
-    estimated_delivery_time = models.IntegerField(
-        _('მიწოდების დრო (საათებში)'),
+
+    estimated_delivery_minutes = models.IntegerField(
+        _('მიწოდების დრო (წუთებში)'),
         validators=[MinValueValidator(1)]
     )
     comment = models.TextField(
@@ -303,7 +304,7 @@ class Bid(models.Model):
             shipment=self.shipment,
             platform=self.platform,
             price=self.price,
-            estimated_delivery_time=self.estimated_delivery_time,
+            estimated_delivery_minutes=self.estimated_delivery_minutes,
             currency=self.currency,
             external_user_id=self.external_user_id,
             defaults={'rejected_at': timezone.now()}
@@ -337,7 +338,7 @@ class RejectedBidCache(models.Model):
         max_digits=10,
         decimal_places=2
     )
-    estimated_delivery_time = models.IntegerField(
+    estimated_delivery_minutes = models.IntegerField(
         _('მიწოდების დრო (საათებში)')
     )
     currency = models.ForeignKey(
@@ -364,7 +365,7 @@ class RejectedBidCache(models.Model):
         db_table = 'rejected_bids_cache'
         constraints = [
             models.UniqueConstraint(
-                fields=['shipment', 'platform', 'price', 'estimated_delivery_time', 'currency', 'external_user_id'],
+                fields=['shipment', 'platform', 'price', 'estimated_delivery_minutes', 'currency', 'external_user_id'],
                 name='unique_rejected_bid'
             )
         ]
