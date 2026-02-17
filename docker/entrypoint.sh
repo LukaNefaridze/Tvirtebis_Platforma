@@ -26,7 +26,7 @@ PY
 }
 
 DB_HOST="${DB_HOST:-}"
-DB_PORT="${DB_PORT:-5432}"
+DB_PORT="${DB_PORT:-5417}"
 
 if [[ -n "${DB_HOST}" ]]; then
   echo "Waiting for DB ${DB_HOST}:${DB_PORT}..."

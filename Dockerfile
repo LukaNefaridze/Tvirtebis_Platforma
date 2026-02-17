@@ -30,7 +30,7 @@ RUN python generate_keys.py
 ENV DOTENV_PATH=/app/.env
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Use entrypoint to wait for DB and run migrations before main command
 COPY docker/entrypoint.sh /entrypoint.sh
